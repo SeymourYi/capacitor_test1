@@ -10,11 +10,8 @@ export const userLogin = (username, password) => {
     : '/api'  // Web端使用代理路径
 
   return request({
-    url: isNative ? `${baseURL}/user/login` : '/user/login',
+    url: isNative ? `${baseURL}/user/login?username=${username}&password=${password}` : `/user/login?username=${username}&password=${password}`,
     method: 'post',
-    data: {
-      username: username,
-      password: password
-    }
+    // data: {}
   })
 }

@@ -1,9 +1,24 @@
 import axios from 'axios'
 import { Capacitor } from '@capacitor/core'
 import { CapacitorHttp } from '@capacitor/core'
+import { useUserStore } from '../store/user.js'
 
 // 检测是否在移动端环境
 const isNative = Capacitor.isNativePlatform()
+
+// 获取token的函数
+const getToken = () => {
+  try {
+    const userStore = useUserStore()
+    const token = userStore.token
+    console.log('当前token:', token)
+    return token
+  } catch (error) {
+    console.error('获取token失败:', error)
+    // 如果store还没初始化，返回写死的token
+    return 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJjbGFpbXMiOnsiaWQiOjEsInVzZXJuYW1lIjoiMTExMSJ9fQ.-r-9m5-y0HMZnNwIwCwYATpHETDQwPKuELkCmvJ3apc'
+  }
+}
 
 // 创建axios实例（用于Web环境）
 const axiosInstance = axios.create({
@@ -20,7 +35,19 @@ const axiosInstance = axios.create({
 // Web环境的请求拦截器
 axiosInstance.interceptors.request.use(
   config => {
-    console.log('发送请求 (Web):', config)
+    // 添加token到请求头
+    const token = getToken()
+    if (token) {
+      config.headers['Authorization'] = token
+      console.log('✅ 已添加Authorization到请求头:', token.substring(0, 20) + '...')
+    } else {
+      console.warn('⚠️ 没有找到token')
+    }
+    console.log('发送请求 (Web):', {
+      url: config.url,
+      method: config.method,
+      headers: config.headers
+    })
     return config
   },
   error => {
@@ -55,6 +82,9 @@ const nativeRequest = async (config) => {
 
     console.log('请求URL:', url)
 
+    // 获取token
+    const token = getToken()
+
     // 使用 Capacitor HTTP 插件（原生请求，无CORS限制）
     const options = {
       url: url,
@@ -64,6 +94,14 @@ const nativeRequest = async (config) => {
         'Accept': 'application/json, text/plain, */*',
         ...config.headers
       }
+    }
+
+    // 添加Authorization token到请求头
+    if (token) {
+      options.headers['Authorization'] = token
+      console.log('✅ 已添加Authorization到移动端请求头:', token.substring(0, 20) + '...')
+    } else {
+      console.warn('⚠️ 移动端请求没有找到token')
     }
 
     // 添加请求体（如果有）
