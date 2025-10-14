@@ -28,7 +28,7 @@
     <div v-else-if="article" class="article-detail">
       <!-- 作者信息 -->
       <div class="author-section">
-        <div class="author-avatar">
+        <div class="author-avatar" @click="goToUser()">
           <img 
             v-if="article.userPic" 
             :src="article.userPic" 
@@ -211,6 +211,10 @@ const fetchArticle = async () => {
 
 const goBack = () => {
   router.back()
+}
+
+const goToUser = () => {
+  router.push({ name: 'UserProfile', params: { id: '1' } })
 }
 
 onMounted(() => {

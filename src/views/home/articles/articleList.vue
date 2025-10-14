@@ -1,41 +1,5 @@
 <template>
   <div class="twitter-container">
-    <!-- 头部导航栏 -->
-    <div class="header">
-      <div class="header-content">
-        <h1 class="header-title">首页</h1>
-      </div>
-    </div>
-
-    <!-- 发推文框 -->
-    <div class="compose-tweet">
-      <div class="compose-avatar">
-        <div class="avatar"></div>
-      </div>
-      <div class="compose-content">
-        <textarea placeholder="有什么新鲜事？" class="compose-input"></textarea>
-        <div class="compose-actions">
-          <div class="compose-icons">
-            <svg class="icon" viewBox="0 0 24 24">
-              <path d="M3 5.5C3 4.119 4.119 3 5.5 3h13C19.881 3 21 4.119 21 5.5v13c0 1.381-1.119 2.5-2.5 2.5h-13C4.119 21 3 19.881 3 18.5v-13zM5.5 5c-.276 0-.5.224-.5.5v13c0 .276.224.5.5.5h13c.276 0 .5-.224.5-.5v-13c0-.276-.224-.5-.5-.5h-13zM18 15.5c0 .83-.67 1.5-1.5 1.5H7.5c-.83 0-1.5-.67-1.5-1.5v-7C6 7.67 6.67 7 7.5 7h9c.83 0 1.5.67 1.5 1.5v7zm-5-5.5c0 1.1-.9 2-2 2s-2-.9-2-2 .9-2 2-2 2 .9 2 2z"></path>
-            </svg>
-            <svg class="icon" viewBox="0 0 24 24">
-              <path d="M6 5c-1.1 0-2 .895-2 2s.9 2 2 2c1.1 0 2-.895 2-2s-.9-2-2-2zM2 7c0-2.209 1.79-4 4-4s4 1.791 4 4-1.79 4-4 4-4-1.791-4-4zm20 1H12V6h10v2zM6 15c-1.1 0-2 .895-2 2s.9 2 2 2c1.1 0 2-.895 2-2s-.9-2-2-2zm-4 2c0-2.209 1.79-4 4-4s4 1.791 4 4-1.79 4-4 4-4-1.791-4-4zm20 1H12v-2h10v2z"></path>
-            </svg>
-            <svg class="icon" viewBox="0 0 24 24">
-              <path d="M8 9.5C8 8.119 8.672 7 9.5 7S11 8.119 11 9.5 10.328 12 9.5 12 8 10.881 8 9.5zm6.5 2.5c.828 0 1.5-1.119 1.5-2.5S15.328 7 14.5 7 13 8.119 13 9.5s.672 2.5 1.5 2.5zM12 16c-2.224 0-3.021-2.227-3.051-2.316l-1.897.633c.05.15 1.271 3.684 4.949 3.684s4.898-3.533 4.949-3.684l-1.896-.638c-.033.095-.83 2.322-3.053 2.322zm10.25-4.001c0 5.652-4.598 10.25-10.25 10.25S1.75 17.652 1.75 12 6.348 1.75 12 1.75 22.25 6.348 22.25 12zm-2 0c0-4.549-3.701-8.25-8.25-8.25S3.75 7.451 3.75 12s3.701 8.25 8.25 8.25 8.25-3.701 8.25-8.25z"></path>
-            </svg>
-            <svg class="icon" viewBox="0 0 24 24">
-              <path d="M6 3V2h2v1h6V2h2v1h1.5C18.88 3 20 4.119 20 5.5v2h-2v-2c0-.276-.22-.5-.5-.5H16v1h-2V5H8v1H6V5H4.5c-.28 0-.5.224-.5.5v12c0 .276.22.5.5.5h3v2h-3C3.12 20 2 18.881 2 17.5v-12C2 4.119 3.12 3 4.5 3H6zm9.5 8.5l-5.97 5.97-2.03-2.03-1.06 1.06 3.09 3.09 7.03-7.03L15.5 11.5z"></path>
-            </svg>
-          </div>
-          <button class="tweet-button">发布</button>
-        </div>
-      </div>
-    </div>
-
-    <!-- 分隔线 -->
-    <div class="divider"></div>
 
     <!-- 加载状态 -->
     <div v-if="loading" class="loading-container">
@@ -57,7 +21,7 @@
         class="tweet-item"
         @click="goToArticle(article.id)"
       >
-        <div class="tweet-avatar">
+        <div class="tweet-avatar" @click.stop="goToUser()">
           <img 
             v-if="article.userPic" 
             :src="article.userPic" 
@@ -133,6 +97,13 @@
         <p>暂无内容</p>
       </div>
     </div>
+    
+    <!-- 右下发布按钮 -->
+    <button class="fab" aria-label="发布" @click.stop="goToPost">
+      <svg viewBox="0 0 24 24" class="fab-icon">
+        <path d="M12 5v14m-7-7h14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>
+      </svg>
+    </button>
     </div>
 </template>
 
@@ -192,6 +163,16 @@ const goToArticle = (id) => {
     name: 'ArticleInfo', 
     params: { id } 
   })
+}
+
+// 跳转到用户主页（写死ID）
+const goToUser = () => {
+  router.push({ name: 'UserProfile', params: { id: '1' } })
+}
+
+// 跳转到发布页
+const goToPost = () => {
+  router.push({ name: 'PostArticle' })
 }
 
 onMounted(() => {
@@ -569,6 +550,33 @@ onMounted(() => {
   padding: 40px 16px;
   text-align: center;
   color: #536471;
+}
+
+/* 悬浮发布按钮 */
+.fab {
+  position: fixed;
+  right: 16px;
+  bottom: 24px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  border: none;
+  color: #ffffff;
+  background-color: #1DA1F2;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+}
+
+.fab:active {
+  background-color: #1a8cd8;
+}
+
+.fab-icon {
+  width: 24px;
+  height: 24px;
 }
 
 /* 移动端优化 */
