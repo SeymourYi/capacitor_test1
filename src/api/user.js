@@ -15,3 +15,17 @@ export const userLogin = (username, password) => {
     // data: {}
   })
 }
+
+// 获取用户信息API
+export const getUserInfo = () => {
+  const isNative = Capacitor.isNativePlatform()
+  const baseURL = isNative 
+    ? 'https://qianxunweimeng.cn:5361'
+    : '/api'
+
+  return request({
+    url: isNative ? `${baseURL}/user/userinfo` : `/user/userinfo`,
+    method: 'get'
+  })
+}
+

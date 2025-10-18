@@ -54,6 +54,37 @@
         
         <p class="article-text">{{ article.content }}</p>
         
+        <!-- 转发内容 -->
+        <div v-if="article.userShare && article.beShareContent" class="retweet-container">
+          <div class="retweet-header">
+            <svg viewBox="0 0 24 24" class="retweet-icon">
+              <path d="M4.5 3.88l4.432 4.14-1.364 1.46L5.5 7.55V16c0 1.1.896 2 2 2H13v2H7.5c-2.209 0-4-1.79-4-4V7.55L1.432 9.48.068 8.02 4.5 3.88zM16.5 6H11V4h5.5c2.209 0 4 1.79 4 4v8.45l2.068-1.93 1.364 1.46-4.432 4.14-4.432-4.14 1.364-1.46 2.068 1.93V8c0-1.1-.896-2-2-2z"></path>
+            </svg>
+            <span class="retweet-text">{{ article.nickname }} 转推了</span>
+          </div>
+          <div class="retweet-content">
+            <div class="retweet-author">
+              <img 
+                v-if="article.beShareUserPic" 
+                :src="article.beShareUserPic" 
+                class="retweet-avatar" 
+                :alt="article.beShareNickName"
+                @error="handleImageError"
+              />
+              <div v-else class="retweet-avatar-placeholder"></div>
+              <div class="retweet-author-info">
+                <span class="retweet-author-name">{{ article.beShareNickName }}</span>
+                <span class="retweet-author-username">@{{ article.beShareCreaterUserName }}</span>
+                <span class="retweet-time">· {{ article.beShareUptonowTime }}</span>
+              </div>
+            </div>
+            <div class="retweet-text-content">{{ article.beShareContent }}</div>
+            <div v-if="article.beShareCategoryName" class="retweet-category">
+              #{{ article.beShareCategoryName }}
+            </div>
+          </div>
+        </div>
+        
         <!-- 图片列表 -->
         <div v-if="hasImages(article)" class="article-images">
           <div 
@@ -113,8 +144,8 @@
     </div>
 
     <!-- 评论区 -->
-    <div v-if="article && article.iscomment" class="comments-section">
-      <div class="section-header">评论 ({{ article.commentcount || 0 }})</div>
+    <div v-if="article" class="comments-section">
+      <div class="section-header">评论 ({{ comments.length }})</div>
       
       <!-- 评论输入框 -->
       <div class="comment-compose">
@@ -127,8 +158,59 @@
         </div>
       </div>
 
-      <!-- 评论列表占位 -->
-      <div class="comments-placeholder">
+      <!-- 评论列表 -->
+      <div v-if="comments.length > 0" class="comments-list">
+        <div 
+          v-for="c in comments" 
+          :key="c.id" 
+          class="comment-item"
+        >
+          <div class="comment-avatar">
+            <img 
+              v-if="c.userPic" 
+              :src="c.userPic" 
+              class="comment-avatar-img" 
+              :alt="c.nickname"
+              @error="handleImageError"
+            />
+            <div v-else class="comment-avatar-placeholder"></div>
+          </div>
+          <div class="comment-body">
+            <div class="comment-header">
+              <span class="comment-name">{{ c.nickname }}</span>
+              <span class="comment-username">@{{ c.username }}</span>
+              <span class="comment-time">· {{ c.uptonowTime || c.createTime }}</span>
+            </div>
+            <div v-if="c.tonickname || c.tousername" class="comment-replyto">
+              回复 {{ c.tonickname ? '@'+c.tonickname : (c.tousername ? '@'+c.tousername : '') }}
+            </div>
+            <div class="comment-text">{{ c.content }}</div>
+
+            <!-- 评论操作（转推/评论/喜欢）与计数、点赞状态 -->
+            <div class="comment-actions">
+              <div class="c-action">
+                <svg viewBox="0 0 24 24" class="c-icon">
+                  <path d="M1.751 10c0-4.42 3.584-8 8.005-8h4.366c4.49 0 8.129 3.64 8.129 8.13 0 2.96-1.607 5.68-4.196 7.11l-8.054 4.46v-3.69h-.067c-4.49.1-8.183-3.51-8.183-8.01zm8.005-6c-3.317 0-6.005 2.69-6.005 6 0 3.37 2.77 6.08 6.138 6.01l.351-.01h1.761v2.3l5.087-2.81c1.951-1.08 3.163-3.13 3.163-5.36 0-3.39-2.744-6.13-6.129-6.13H9.756z"></path>
+                </svg>
+                <span class="c-count">{{ c.commentcount || 0 }}</span>
+              </div>
+              <div class="c-action retweet">
+                <svg viewBox="0 0 24 24" class="c-icon">
+                  <path d="M4.5 3.88l4.432 4.14-1.364 1.46L5.5 7.55V16c0 1.1.896 2 2 2H13v2H7.5c-2.209 0-4-1.79-4-4V7.55L1.432 9.48.068 8.02 4.5 3.88zM16.5 6H11V4h5.5c2.209 0 4 1.79 4 4v8.45l2.068-1.93 1.364 1.46-4.432 4.14-4.432-4.14 1.364-1.46 2.068 1.93V8c0-1.1-.896-2-2-2z"></path>
+                </svg>
+                <span class="c-count">{{ c.repeatcount || 0 }}</span>
+              </div>
+              <div class="c-action like" :class="{ liked: c.islike }">
+                <svg viewBox="0 0 24 24" class="c-icon">
+                  <path d="M16.697 5.5c-1.222-.06-2.679.51-3.89 2.16l-.805 1.09-.806-1.09C9.984 6.01 8.526 5.44 7.304 5.5c-1.243.07-2.349.78-2.91 1.91-.552 1.12-.633 2.78.479 4.82 1.074 1.97 3.257 4.27 7.129 6.61 3.87-2.34 6.052-4.64 7.126-6.61 1.111-2.04 1.03-3.7.477-4.82-.561-1.13-1.666-1.84-2.908-1.91zm4.187 7.69c-1.351 2.48-4.001 5.12-8.379 7.67l-.503.3-.504-.3c-4.379-2.55-7.029-5.19-8.382-7.67-1.36-2.5-1.41-4.86-.514-6.67.887-1.79 2.647-2.91 4.601-3.01 1.651-.09 3.368.56 4.798 2.01 1.429-1.45 3.146-2.1 4.796-2.01 1.954.1 3.714 1.22 4.601 3.01.896 1.81.846 4.17-.514 6.67z"></path>
+                </svg>
+                <span class="c-count">{{ c.likecont || 0 }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div v-else class="comments-placeholder">
         <p>暂无评论</p>
       </div>
     </div>
@@ -138,7 +220,7 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { getArticleDetail } from '../../../api/article.js'
+import { getArticleDetail, getArticleCommentApi } from '../../../api/article.js'
 
 const router = useRouter()
 const route = useRoute()
@@ -146,6 +228,7 @@ const route = useRoute()
 const article = ref(null)
 const loading = ref(false)
 const error = ref(null)
+const comments = ref([])
 
 // 判断是否有图片
 const hasImages = (article) => {
@@ -209,6 +292,20 @@ const fetchArticle = async () => {
   }
 }
 
+// 获取评论列表
+const fetchComments = async () => {
+  try {
+    const articleId = route.params.id
+    const res = await getArticleCommentApi(articleId)
+    console.log('评论列表API返回:', res)
+    if (res.code === 0) {
+      comments.value = Array.isArray(res.data) ? res.data : []
+    }
+  } catch (e) {
+    console.error('获取评论失败:', e)
+  }
+}
+
 const goBack = () => {
   router.back()
 }
@@ -219,6 +316,7 @@ const goToUser = () => {
 
 onMounted(() => {
   fetchArticle()
+  fetchComments()
 })
 </script>
 
@@ -404,6 +502,102 @@ onMounted(() => {
   font-size: 15px;
   color: #1DA1F2;
   margin-bottom: 8px;
+  font-weight: 500;
+}
+
+/* 转发内容样式 */
+.retweet-container {
+  margin-top: 16px;
+  border: 1px solid #eff3f4;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #f7f9f9;
+}
+
+.retweet-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: #ffffff;
+  border-bottom: 1px solid #eff3f4;
+}
+
+.retweet-icon {
+  width: 18px;
+  height: 18px;
+  fill: #536471;
+}
+
+.retweet-text {
+  font-size: 14px;
+  color: #536471;
+  font-weight: 500;
+}
+
+.retweet-content {
+  padding: 16px;
+}
+
+.retweet-author {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.retweet-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.retweet-avatar-placeholder {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #1DA1F2;
+}
+
+.retweet-author-info {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.retweet-author-name {
+  font-weight: 700;
+  color: #0f1419;
+  font-size: 15px;
+}
+
+.retweet-author-username {
+  color: #536471;
+  font-size: 15px;
+}
+
+.retweet-time {
+  color: #536471;
+  font-size: 15px;
+}
+
+.retweet-text-content {
+  color: #0f1419;
+  font-size: 15px;
+  line-height: 1.4;
+  margin-bottom: 10px;
+}
+
+.retweet-category {
+  display: inline-block;
+  background: #e6f4ff;
+  color: #1DA1F2;
+  padding: 3px 8px;
+  border-radius: 10px;
+  font-size: 13px;
   font-weight: 500;
 }
 
@@ -612,6 +806,29 @@ onMounted(() => {
   text-align: center;
   color: #536471;
 }
+
+/* 评论列表（推特样式） */
+.comments-list { display: flex; flex-direction: column; }
+.comment-item { display: flex; gap: 12px; padding: 12px 16px; border-bottom: 1px solid #eff3f4; }
+.comment-avatar { flex-shrink: 0; }
+.comment-avatar-img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
+.comment-avatar-placeholder { width: 40px; height: 40px; border-radius: 50%; background: #1DA1F2; }
+.comment-body { flex: 1; min-width: 0; }
+.comment-header { display: flex; align-items: baseline; gap: 6px; }
+.comment-name { font-weight: 700; color: #0f1419; }
+.comment-username, .comment-time { color: #536471; font-size: 14px; }
+.comment-replyto { color: #536471; font-size: 14px; margin: 2px 0 4px; }
+.comment-text { color: #0f1419; white-space: pre-wrap; word-break: break-word; }
+
+/* 评论操作条（与主页动作风格统一） */
+.comment-actions { display: flex; justify-content: space-between; max-width: 380px; margin-top: 6px; }
+.c-action { display: flex; align-items: center; gap: 4px; padding: 6px; border-radius: 18px; }
+.c-icon { width: 18px; height: 18px; fill: #536471; }
+.c-count { font-size: 13px; color: #536471; min-width: 20px; }
+.c-action.like.liked { background-color: rgba(249, 24, 128, 0.1); }
+.c-action.like.liked .c-icon { fill: #f91880; }
+.c-action.like.liked .c-count { color: #f91880; }
+.c-action.retweet:active { background-color: rgba(0, 186, 124, 0.1); }
 
 /* 移动端优化 */
 @media (max-width: 600px) {

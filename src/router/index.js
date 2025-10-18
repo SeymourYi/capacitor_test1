@@ -33,6 +33,11 @@ const routes = [
         path: 'me',
         name: 'Me',
         component: () => import('../views/home/me/me.vue')
+      },
+      {
+        path: 'settings',
+        name: 'Settings',
+        component: () => import('../views/settings/settings.vue')
       }
     ]
   },
@@ -52,6 +57,12 @@ const routes = [
     path: '/user/:id',
     name: 'UserProfile',
     component: () => import('../views/home/user/user.vue')
+  }
+  ,
+  {
+    path: '/login',
+    name: 'Login',
+    component: () => import('../views/login/index.vue')
   }
 ]
 

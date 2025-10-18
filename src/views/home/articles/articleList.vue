@@ -47,6 +47,37 @@
             {{ article.content }}
           </div>
           
+          <!-- 转发内容 -->
+          <div v-if="article.userShare && article.beShareContent" class="retweet-container">
+            <div class="retweet-header">
+              <svg viewBox="0 0 24 24" class="retweet-icon">
+                <path d="M4.5 3.88l4.432 4.14-1.364 1.46L5.5 7.55V16c0 1.1.896 2 2 2H13v2H7.5c-2.209 0-4-1.79-4-4V7.55L1.432 9.48.068 8.02 4.5 3.88zM16.5 6H11V4h5.5c2.209 0 4 1.79 4 4v8.45l2.068-1.93 1.364 1.46-4.432 4.14-4.432-4.14 1.364-1.46 2.068 1.93V8c0-1.1-.896-2-2-2z"></path>
+              </svg>
+              <span class="retweet-text">{{ article.nickname }} 转推了</span>
+            </div>
+            <div class="retweet-content">
+              <div class="retweet-author">
+                <img 
+                  v-if="article.beShareUserPic" 
+                  :src="article.beShareUserPic" 
+                  class="retweet-avatar" 
+                  :alt="article.beShareNickName"
+                  @error="handleImageError"
+                />
+                <div v-else class="retweet-avatar-placeholder"></div>
+                <div class="retweet-author-info">
+                  <span class="retweet-author-name">{{ article.beShareNickName }}</span>
+                  <span class="retweet-author-username">@{{ article.beShareCreaterUserName }}</span>
+                  <span class="retweet-time">· {{ article.beShareUptonowTime }}</span>
+                </div>
+              </div>
+              <div class="retweet-text-content">{{ article.beShareContent }}</div>
+              <div v-if="article.beShareCategoryName" class="retweet-category">
+                #{{ article.beShareCategoryName }}
+              </div>
+            </div>
+          </div>
+          
           <!-- 图片列表 -->
           <div v-if="hasImages(article)" class="tweet-images">
             <div 
@@ -415,6 +446,102 @@ onMounted(() => {
   font-size: 14px;
   color: #1DA1F2;
   margin-bottom: 4px;
+}
+
+/* 转发内容样式 */
+.retweet-container {
+  margin-top: 12px;
+  border: 1px solid #eff3f4;
+  border-radius: 12px;
+  overflow: hidden;
+  background: #f7f9f9;
+}
+
+.retweet-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #ffffff;
+  border-bottom: 1px solid #eff3f4;
+}
+
+.retweet-icon {
+  width: 16px;
+  height: 16px;
+  fill: #536471;
+}
+
+.retweet-text {
+  font-size: 13px;
+  color: #536471;
+  font-weight: 500;
+}
+
+.retweet-content {
+  padding: 12px;
+}
+
+.retweet-author {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.retweet-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.retweet-avatar-placeholder {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #1DA1F2;
+}
+
+.retweet-author-info {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.retweet-author-name {
+  font-weight: 700;
+  color: #0f1419;
+  font-size: 14px;
+}
+
+.retweet-author-username {
+  color: #536471;
+  font-size: 14px;
+}
+
+.retweet-time {
+  color: #536471;
+  font-size: 14px;
+}
+
+.retweet-text-content {
+  color: #0f1419;
+  font-size: 14px;
+  line-height: 1.4;
+  margin-bottom: 8px;
+}
+
+.retweet-category {
+  display: inline-block;
+  background: #e6f4ff;
+  color: #1DA1F2;
+  padding: 2px 6px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 500;
 }
 
 .tweet-text {

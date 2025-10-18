@@ -2,7 +2,16 @@
   <div class="layout">
     <!-- 顶部栏：左侧头像 + 中间标题 -->
     <div class="topbar">
-      <div class="avatar"></div>
+      <div class="avatar" @click="goToUserProfile">
+        <img 
+          v-if="userStore.userInfo && userStore.userInfo.userPic" 
+          :src="userStore.userInfo.userPic" 
+          class="avatar-img" 
+          :alt="userStore.userInfo.nickname"
+          @error="handleImageError"
+        />
+        <div v-else class="avatar-placeholder"></div>
+      </div>
       <div class="title">{{ currentTitle }}</div>
       <div class="right-placeholder"></div>
     </div>
@@ -45,9 +54,11 @@
 <script setup>
 import { computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { useUserStore } from '@/store/user.js'
 
 const route = useRoute()
 const router = useRouter()
+const userStore = useUserStore()
 
 const isHome = computed(() => route.name === 'HomeFeed')
 const isMessages = computed(() => route.name === 'Messages')
@@ -75,6 +86,16 @@ const goNotice = () => {
 
 const goMessages = () => {
   if (!isMessages.value) router.push({ name: 'Messages' })
+}
+
+const goToUserProfile = () => {
+  if (userStore.userInfo && userStore.userInfo.id) {
+    router.push({ name: 'UserProfile', params: { id: userStore.userInfo.id } })
+  }
+}
+
+const handleImageError = (e) => {
+  e.target.style.display = 'none'
 }
 </script>
 
@@ -104,6 +125,21 @@ const goMessages = () => {
 .avatar {
   width: 32px;
   height: 32px;
+  border-radius: 50%;
+  background: #1DA1F2;
+  cursor: pointer;
+}
+
+.avatar-img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.avatar-placeholder {
+  width: 100%;
+  height: 100%;
   border-radius: 50%;
   background: #1DA1F2;
 }
