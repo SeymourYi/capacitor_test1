@@ -8,7 +8,15 @@
             <path d="M7.414 13l5.043 5.04-1.414 1.42L3.586 12l7.457-7.46 1.414 1.42L7.414 11H21v2H7.414z"></path>
           </svg>
         </div>
+        <div class="header-logo">
+          <div class="logo-icon">🐦</div>
+        </div>
         <h1 class="header-title">推文</h1>
+        <div v-if="article" class="header-menu" @click="toggleMenu">
+          <svg viewBox="0 0 24 24" class="menu-icon">
+            <path d="M12 3c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 7c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 7c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" fill="currentColor"/>
+          </svg>
+        </div>
       </div>
     </div>
 
@@ -28,7 +36,7 @@
     <div v-else-if="article" class="article-detail">
       <!-- 作者信息 -->
       <div class="author-section">
-        <div class="author-avatar" @click="goToUser()">
+        <div class="author-avatar" @click="goToUser(article.username)">
           <img 
             v-if="article.userPic" 
             :src="article.userPic" 
@@ -48,9 +56,9 @@
       <!-- 文章内容 -->
       <div class="article-content">
         <!-- 分类标签 -->
-        <div v-if="article.categoryName" class="category-tag">
+        <!-- <div v-if="article.categoryName" class="category-tag">
           #{{ article.categoryName }}
-        </div>
+        </div> -->
         
         <p class="article-text">{{ article.content }}</p>
         
@@ -91,6 +99,7 @@
             v-for="(img, index) in getImageList(article)" 
             :key="index"
             class="article-image"
+            @click="openImagePreview(article, index)"
           >
             <img :src="img" alt="文章图片" @error="handleImageError" />
           </div>
@@ -120,17 +129,17 @@
 
       <!-- 操作按钮 -->
       <div class="article-actions">
-        <div class="action-button">
+        <div class="action-button" @click="goToComment">
           <svg viewBox="0 0 24 24" class="action-icon">
             <path d="M1.751 10c0-4.42 3.584-8 8.005-8h4.366c4.49 0 8.129 3.64 8.129 8.13 0 2.96-1.607 5.68-4.196 7.11l-8.054 4.46v-3.69h-.067c-4.49.1-8.183-3.51-8.183-8.01zm8.005-6c-3.317 0-6.005 2.69-6.005 6 0 3.37 2.77 6.08 6.138 6.01l.351-.01h1.761v2.3l5.087-2.81c1.951-1.08 3.163-3.13 3.163-5.36 0-3.39-2.744-6.13-6.129-6.13H9.756z"></path>
           </svg>
         </div>
-        <div class="action-button retweet">
+        <div class="action-button retweet" @click="goToRepeat">
           <svg viewBox="0 0 24 24" class="action-icon">
             <path d="M4.5 3.88l4.432 4.14-1.364 1.46L5.5 7.55V16c0 1.1.896 2 2 2H13v2H7.5c-2.209 0-4-1.79-4-4V7.55L1.432 9.48.068 8.02 4.5 3.88zM16.5 6H11V4h5.5c2.209 0 4 1.79 4 4v8.45l2.068-1.93 1.364 1.46-4.432 4.14-4.432-4.14 1.364-1.46 2.068 1.93V8c0-1.1-.896-2-2-2z"></path>
           </svg>
         </div>
-        <div class="action-button like" :class="{ 'liked': article.islike }">
+        <div class="action-button like" :class="{ 'liked': article.islike }" @click="handleLike">
           <svg viewBox="0 0 24 24" class="action-icon">
             <path d="M16.697 5.5c-1.222-.06-2.679.51-3.89 2.16l-.805 1.09-.806-1.09C9.984 6.01 8.526 5.44 7.304 5.5c-1.243.07-2.349.78-2.91 1.91-.552 1.12-.633 2.78.479 4.82 1.074 1.97 3.257 4.27 7.129 6.61 3.87-2.34 6.052-4.64 7.126-6.61 1.111-2.04 1.03-3.7.477-4.82-.561-1.13-1.666-1.84-2.908-1.91zm4.187 7.69c-1.351 2.48-4.001 5.12-8.379 7.67l-.503.3-.504-.3c-4.379-2.55-7.029-5.19-8.382-7.67-1.36-2.5-1.41-4.86-.514-6.67.887-1.79 2.647-2.91 4.601-3.01 1.651-.09 3.368.56 4.798 2.01 1.429-1.45 3.146-2.1 4.796-2.01 1.954.1 3.714 1.22 4.601 3.01.896 1.81.846 4.17-.514 6.67z"></path>
           </svg>
@@ -147,16 +156,6 @@
     <div v-if="article" class="comments-section">
       <div class="section-header">评论 ({{ comments.length }})</div>
       
-      <!-- 评论输入框 -->
-      <div class="comment-compose">
-        <div class="comment-avatar">
-          <div class="avatar-placeholder"></div>
-        </div>
-        <div class="comment-input-wrapper">
-          <textarea placeholder="发布你的回复" class="comment-input"></textarea>
-          <button class="reply-button">回复</button>
-        </div>
-      </div>
 
       <!-- 评论列表 -->
       <div v-if="comments.length > 0" class="comments-list">
@@ -214,21 +213,58 @@
         <p>暂无评论</p>
       </div>
     </div>
+
+    <!-- 图片预览组件 -->
+    <PreviewImg 
+      v-model:visible="previewVisible"
+      :images="previewImages"
+      :initial-index="previewIndex"
+    />
+
+    <!-- 文章菜单 -->
+    <div v-if="showMenu" class="menu-overlay" @click="closeMenu">
+      <div class="menu-content" @click.stop>
+        <div v-if="isCurrentUserArticle" class="menu-item delete" @click="deleteArticle">
+          <svg viewBox="0 0 24 24" class="menu-item-icon">
+            <path d="M16 6V4.5C16 3.12 14.88 2 13.5 2h-3C9.12 2 8 3.12 8 4.5V6H3v2h1v9c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8h1V6h-5zM10 4.5c0-.28.22-.5.5-.5h3c.28 0 .5.22.5.5V6h-4V4.5zM18 18H6V8h12v10z" fill="currentColor"/>
+          </svg>
+          <span>删除</span>
+        </div>
+        <div v-else class="menu-item report" @click="reportArticle">
+          <svg viewBox="0 0 24 24" class="menu-item-icon">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" fill="currentColor"/>
+          </svg>
+          <span>举报</span>
+        </div>
+      </div>
+    </div>
     </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
-import { getArticleDetail, getArticleCommentApi } from '../../../api/article.js'
+import { getArticleDetail, getArticleCommentApi, likeArticleApi, deleteArticleApi } from '@/api/article.js'
+import { useUserStore } from '@/store/user.js'
+import PreviewImg from '@/components/PreviewImg.vue'
 
 const router = useRouter()
 const route = useRoute()
+const userStore = useUserStore()
 
 const article = ref(null)
 const loading = ref(false)
 const error = ref(null)
 const comments = ref([])
+
+// 图片预览相关
+const previewVisible = ref(false)
+const previewImages = ref([])
+const previewIndex = ref(0)
+
+// 菜单相关
+const showMenu = ref(false)
+const isCurrentUserArticle = ref(false)
 
 // 判断是否有图片
 const hasImages = (article) => {
@@ -246,11 +282,7 @@ const hasImages = (article) => {
 // 获取图片列表
 const getImageList = (article) => {
   const images = []
-  
-  // 如果有coverImg单图，优先使用
-  if (article.coverImg && article.coverImg.trim() !== '') {
-    images.push(article.coverImg)
-  }
+
   
   // 如果有coverImgList多图，添加到列表
   if (article.coverImgList && Array.isArray(article.coverImgList)) {
@@ -310,8 +342,115 @@ const goBack = () => {
   router.back()
 }
 
-const goToUser = () => {
-  router.push({ name: 'UserProfile', params: { id: '1' } })
+const goToUser = (username) => {
+  if (!username) return
+  router.push({ name: 'UserProfile', params: { id: username } })
+}
+
+// 跳转到评论发布页面
+const goToComment = () => {
+  if (!article.value) return
+  router.push({ 
+    name: 'PostCommitArticle', 
+    query: { 
+      articleId: article.value.id,
+      articleContent: article.value.content,
+      articleAuthor: article.value.nickname,
+      articleAuthorPic: article.value.userPic,
+      articleImages: JSON.stringify(getImageList(article.value))
+    }
+  })
+}
+
+// 跳转到引用发布页面
+const goToRepeat = () => {
+  if (!article.value) return
+  router.push({ 
+    name: 'PostRepeatArticle', 
+    query: { 
+      articleId: article.value.id,
+      articleContent: article.value.content,
+      articleAuthor: article.value.nickname,
+      articleAuthorPic: article.value.userPic,
+      articleImages: JSON.stringify(getImageList(article.value))
+    }
+  })
+}
+
+// 打开图片预览
+const openImagePreview = (article, index) => {
+  previewImages.value = getImageList(article)
+  previewIndex.value = index
+  previewVisible.value = true
+}
+
+// 点赞文章
+const handleLike = async () => {
+  if (!userStore.userInfo || !userStore.userInfo.username) {
+    console.error('用户未登录')
+    return
+  }
+
+  if (!article.value) return
+
+  try {
+    const res = await likeArticleApi(userStore.userInfo.username, article.value.id)
+    if (res && res.code === 0) {
+      // 更新本地状态
+      article.value.islike = !article.value.islike
+      if (article.value.islike) {
+        article.value.likecont = (article.value.likecont || 0) + 1
+      } else {
+        article.value.likecont = Math.max((article.value.likecont || 1) - 1, 0)
+      }
+    } else {
+      console.error('点赞失败:', res?.msg || '未知错误')
+    }
+  } catch (error) {
+    console.error('点赞请求失败:', error)
+  }
+}
+
+// 菜单相关函数
+const toggleMenu = () => {
+  if (!article.value) return
+  isCurrentUserArticle.value = userStore.userInfo && article.value.username === userStore.userInfo.username
+  showMenu.value = true
+}
+
+const closeMenu = () => {
+  showMenu.value = false
+}
+
+const deleteArticle = async () => {
+  if (!article.value) return
+  
+  if (confirm('确定要删除这篇文章吗？此操作不可撤销。')) {
+    try {
+      const res = await deleteArticleApi(article.value.id)
+      if (res && res.code === 0) {
+        console.log('文章删除成功')
+        // 删除成功后返回上一页
+        router.back()
+      } else {
+        console.error('删除失败:', res?.msg || '未知错误')
+        alert('删除失败，请稍后重试')
+      }
+    } catch (error) {
+      console.error('删除文章失败:', error)
+      alert('删除失败，请检查网络连接')
+    }
+    closeMenu()
+  }
+}
+
+const reportArticle = () => {
+  if (!article.value) return
+  
+  // TODO: 实现举报功能
+  console.log('举报文章:', article.value.id)
+  alert('举报已提交，我们会尽快处理。')
+  closeMenu()
 }
 
 onMounted(() => {
@@ -351,7 +490,7 @@ onMounted(() => {
   height: 53px;
   display: flex;
   align-items: center;
-  gap: 32px;
+  justify-content: space-between;
 }
 
 .back-button {
@@ -376,11 +515,49 @@ onMounted(() => {
   fill: #0f1419;
 }
 
+.header-logo {
+  display: flex;
+  align-items: center;
+  margin-right: 12px;
+}
+
+.logo-icon {
+  font-size: 24px;
+  margin-right: 8px;
+}
+
 .header-title {
   font-size: 20px;
   font-weight: 700;
   margin: 0;
   color: #0f1419;
+  flex: 1;
+}
+
+.header-menu {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.header-menu:hover {
+  background-color: rgba(29, 161, 242, 0.1);
+}
+
+.menu-icon {
+  width: 20px;
+  height: 20px;
+  fill: #536471;
+  transition: fill 0.2s;
+}
+
+.header-menu:hover .menu-icon {
+  fill: #1DA1F2;
 }
 
 /* 加载和错误状态 */
@@ -611,37 +788,91 @@ onMounted(() => {
   word-break: break-word;
 }
 
-.article-images {
-  display: grid;
-  gap: 4px;
-  margin-top: 12px;
-  border-radius: 16px;
-  overflow: hidden;
-}
+/* 图片网格 - 微信朋友圈样式 */
+  .article-images {
+    display: grid;
+    gap: 4px;
+    margin-top: 12px;
+    border-radius: 8px;
+    overflow: hidden;
+    max-width: 400px;
+  }
+  
+  /* 单张图片 */
+  .article-images:has(.article-image:nth-child(1):last-child) {
+    grid-template-columns: 1fr;
+    max-width: 300px;
+  }
+  
+  .article-images:has(.article-image:nth-child(1):last-child) .article-image {
+    max-height: 400px;
+    aspect-ratio: auto;
+  }
+  
+  /* 两张图片 */
+  .article-images:has(.article-image:nth-child(2):last-child) {
+    grid-template-columns: 1fr 1fr;
+    max-width: 300px;
+  }
+  
+  .article-images:has(.article-image:nth-child(2):last-child) .article-image {
+    aspect-ratio: 1;
+  }
+  
+  /* 三张图片 - 微信朋友圈样式 */
+  .article-images:has(.article-image:nth-child(3):last-child) {
+    grid-template-columns: 2fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    max-width: 300px;
+  }
+  
+  .article-images:has(.article-image:nth-child(3):last-child) .article-image:nth-child(1) {
+    grid-row: 1 / 3;
+    aspect-ratio: 1;
+  }
+  
+  .article-images:has(.article-image:nth-child(3):last-child) .article-image:nth-child(2),
+  .article-images:has(.article-image:nth-child(3):last-child) .article-image:nth-child(3) {
+    aspect-ratio: 1;
+  }
+  
+  /* 四张图片 - 2x2网格 */
+  .article-images:has(.article-image:nth-child(4):last-child) {
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    max-width: 300px;
+  }
+  
+  .article-images:has(.article-image:nth-child(4):last-child) .article-image {
+    aspect-ratio: 1;
+  }
+  
+  /* 五张及以上图片 - 3列网格 */
+  .article-images:has(.article-image:nth-child(5)) {
+    grid-template-columns: repeat(3, 1fr);
+    max-width: 300px;
+  }
+  
+  .article-images:has(.article-image:nth-child(5)) .article-image {
+    aspect-ratio: 1;
+  }
+  
+  .article-image {
+    position: relative;
+    overflow: hidden;
+    background-color: #f7f9f9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: opacity 0.2s;
+  }
 
-.article-images:has(.article-image:nth-child(1):last-child) {
-  grid-template-columns: 1fr;
-}
-
-.article-images:has(.article-image:nth-child(2)) {
-  grid-template-columns: 1fr 1fr;
-}
-
-.article-image {
-  position: relative;
-  overflow: hidden;
-  background-color: #f7f9f9;
-}
-
-.article-images:has(.article-image:nth-child(1):last-child) .article-image {
-  max-height: 500px;
-}
-
-.article-images:has(.article-image:nth-child(n+2)) .article-image {
-  aspect-ratio: 1;
-}
-
-.article-image img {
+  .article-image:hover {
+    opacity: 0.9;
+  }
+  
+  .article-image img {
   width: 100%;
   height: 100%;
   object-fit: cover;
@@ -758,6 +989,13 @@ onMounted(() => {
 
 .comment-avatar {
   flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .comment-input-wrapper {
@@ -810,9 +1048,33 @@ onMounted(() => {
 /* 评论列表（推特样式） */
 .comments-list { display: flex; flex-direction: column; }
 .comment-item { display: flex; gap: 12px; padding: 12px 16px; border-bottom: 1px solid #eff3f4; }
-.comment-avatar { flex-shrink: 0; }
-.comment-avatar-img { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; }
-.comment-avatar-placeholder { width: 40px; height: 40px; border-radius: 50%; background: #1DA1F2; }
+.comment-avatar { 
+  flex-shrink: 0; 
+  width: 40px; 
+  height: 40px; 
+  border-radius: 50%; 
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.comment-avatar-img { 
+  width: 100%; 
+  height: 100%; 
+  object-fit: cover; 
+}
+.comment-avatar-placeholder { 
+  width: 100%; 
+  height: 100%; 
+  border-radius: 50%; 
+  background: #1DA1F2; 
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  font-size: 14px;
+  font-weight: 500;
+}
 .comment-body { flex: 1; min-width: 0; }
 .comment-header { display: flex; align-items: baseline; gap: 6px; }
 .comment-name { font-weight: 700; color: #0f1419; }
@@ -895,6 +1157,83 @@ onMounted(() => {
   .article-text {
     font-size: 21px;
   }
+}
+
+/* 菜单覆盖层 */
+.menu-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.menu-content {
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  min-width: 200px;
+  max-width: 300px;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.menu-item:last-child {
+  border-bottom: none;
+}
+
+.menu-item:hover {
+  background-color: #f7f9f9;
+}
+
+.menu-item.delete:hover {
+  background-color: #fef2f2;
+}
+
+.menu-item.report:hover {
+  background-color: #f0f9ff;
+}
+
+.menu-item-icon {
+  width: 20px;
+  height: 20px;
+  fill: #536471;
+}
+
+.menu-item.delete .menu-item-icon {
+  fill: #ef4444;
+}
+
+.menu-item.report .menu-item-icon {
+  fill: #1DA1F2;
+}
+
+.menu-item span {
+  font-size: 16px;
+  font-weight: 500;
+  color: #0f1419;
+}
+
+.menu-item.delete span {
+  color: #ef4444;
+}
+
+.menu-item.report span {
+  color: #1DA1F2;
 }
 
 /* 横屏优化 */

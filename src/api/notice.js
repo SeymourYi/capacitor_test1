@@ -15,3 +15,24 @@ export const getnoticeApi = (username) => {
     });
   };
   
+  //已读某个通知
+  export const readsomeonenotificationApi = (receiverId,notificationId) => {
+    const url = isNative
+      ? `https://qianxunweimeng.cn:5361/user/readsomeonenotification?receiverId=${receiverId}&notificationId=${notificationId}`
+      : `/user/readsomeonenotification?receiverId=${receiverId}&notificationId=${notificationId}`;
+    return request({
+      url: url,
+      method: "POST",
+    });
+  };
+
+  //已读所有通知
+  export const readallnotificationApi = (receiverId) => {
+    const url = isNative
+      ? `https://qianxunweimeng.cn:5361/user/readallnotification?receiverId=${receiverId}`
+      : `/user/readallnotification?receiverId=${receiverId}`;
+    return request({
+      url: url,
+      method: "POST",
+    });
+  };

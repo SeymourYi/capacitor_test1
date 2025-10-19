@@ -1,5 +1,5 @@
 <template>
-  <div class="login-container">
+  <div class="register-container">
     <!-- 背景装饰 -->
     <div class="background-decoration">
       <div class="circle circle-1"></div>
@@ -7,74 +7,16 @@
       <div class="circle circle-3"></div>
     </div>
 
-    <div class="login-card">
+    <div class="register-card">
       <!-- Logo区域 -->
       <div class="logo-section">
         <div class="logo-icon">🐦</div>
-        <h1 class="app-title">欢迎回来</h1>
-        <p class="app-subtitle">登录到您的账户</p>
+        <h1 class="app-title">创建账户</h1>
+        <p class="app-subtitle">加入我们，开始您的旅程</p>
       </div>
 
-      <!-- 登录方式切换 -->
-      <div class="login-tabs">
-        <div 
-          class="tab-item" 
-          :class="{ active: loginType === 'password' }"
-          @click="loginType = 'password'"
-        >
-          密码登录
-        </div>
-        <div 
-          class="tab-item" 
-          :class="{ active: loginType === 'sms' }"
-          @click="loginType = 'sms'"
-        >
-          验证码登录
-        </div>
-      </div>
-
-      <!-- 密码登录表单 -->
-      <div v-if="loginType === 'password'" class="login-form">
-        <div class="input-group">
-          <div class="input-wrapper">
-            <input 
-              class="form-input" 
-              placeholder="用户名" 
-              v-model="username"
-              :class="{ error: usernameError }"
-            />
-            <div class="input-icon">👤</div>
-          </div>
-          <div v-if="usernameError" class="error-text">{{ usernameError }}</div>
-        </div>
-
-        <div class="input-group">
-          <div class="input-wrapper">
-            <input 
-              class="form-input" 
-              placeholder="密码" 
-              type="password" 
-              v-model="password"
-              :class="{ error: passwordError }"
-            />
-            <div class="input-icon">🔒</div>
-          </div>
-          <div v-if="passwordError" class="error-text">{{ passwordError }}</div>
-        </div>
-
-        <button 
-          class="login-btn" 
-          @click="onLogin" 
-          :disabled="loading || !isPasswordFormValid"
-          :class="{ loading: loading }"
-        >
-          <div v-if="loading" class="btn-spinner"></div>
-          {{ loading ? '登录中...' : '登录' }}
-        </button>
-      </div>
-
-      <!-- 验证码登录表单 -->
-      <div v-if="loginType === 'sms'" class="login-form">
+      <!-- 注册表单 -->
+      <div class="register-form">
         <div class="input-group">
           <div class="input-wrapper">
             <input 
@@ -110,14 +52,61 @@
           <div v-if="smsCodeError" class="error-text">{{ smsCodeError }}</div>
         </div>
 
+        <div class="input-group">
+          <div class="input-wrapper">
+            <input 
+              class="form-input" 
+              placeholder="密码" 
+              type="password" 
+              v-model="password"
+              :class="{ error: passwordError }"
+            />
+            <div class="input-icon">🔒</div>
+          </div>
+          <div v-if="passwordError" class="error-text">{{ passwordError }}</div>
+        </div>
+
+        <div class="input-group">
+          <div class="input-wrapper">
+            <input 
+              class="form-input" 
+              placeholder="确认密码" 
+              type="password" 
+              v-model="confirmPassword"
+              :class="{ error: confirmPasswordError }"
+            />
+            <div class="input-icon">🔒</div>
+          </div>
+          <div v-if="confirmPasswordError" class="error-text">{{ confirmPasswordError }}</div>
+        </div>
+
+        <!-- 协议同意 -->
+        <div class="agreement-section">
+          <label class="agreement-checkbox">
+            <input 
+              type="checkbox" 
+              v-model="agreeTerms"
+              :class="{ error: termsError }"
+            />
+            <span class="checkmark"></span>
+            <span class="agreement-text">
+              我已阅读并同意
+              <button type="button" class="link-btn" @click="showTerms">《用户协议》</button>
+              和
+              <button type="button" class="link-btn" @click="showPrivacy">《隐私政策》</button>
+            </span>
+          </label>
+          <div v-if="termsError" class="error-text">{{ termsError }}</div>
+        </div>
+
         <button 
-          class="login-btn" 
-          @click="onSmsLogin" 
-          :disabled="loading || !isSmsFormValid"
+          class="register-btn" 
+          @click="onRegister" 
+          :disabled="loading || !isFormValid"
           :class="{ loading: loading }"
         >
           <div v-if="loading" class="btn-spinner"></div>
-          {{ loading ? '登录中...' : '登录' }}
+          {{ loading ? '注册中...' : '立即注册' }}
         </button>
       </div>
 
@@ -129,8 +118,8 @@
 
       <!-- 底部链接 -->
       <div class="footer-links">
-        <span class="link-text">还没有账户？</span>
-        <button class="link-btn" @click="goToRegister">立即注册</button>
+        <span class="link-text">已有账户？</span>
+        <button class="link-btn" @click="goToLogin">立即登录</button>
       </div>
     </div>
   </div>
@@ -139,29 +128,25 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { userLogin, getUserInfo, getNotificationsNumberApi } from '@/api/user.js'
-import { useUserStore } from '@/store/user.js'
 
 const router = useRouter()
-const userStore = useUserStore()
 
-// 登录方式
-const loginType = ref('password')
-
-// 密码登录相关
-const username = ref('19137056165')
-const password = ref('多少楼台烟雨中')
-const usernameError = ref('')
-const passwordError = ref('')
-
-// 验证码登录相关
+// 表单数据
 const phone = ref('')
 const smsCode = ref('')
+const password = ref('')
+const confirmPassword = ref('')
+const agreeTerms = ref(false)
+
+// 错误信息
 const phoneError = ref('')
 const smsCodeError = ref('')
-const smsCountdown = ref(0)
+const passwordError = ref('')
+const confirmPasswordError = ref('')
+const termsError = ref('')
 
-// 通用状态
+// 其他状态
+const smsCountdown = ref(0)
 const loading = ref(false)
 const error = ref('')
 
@@ -171,24 +156,22 @@ const isValidPhone = computed(() => {
   return phoneRegex.test(phone.value)
 })
 
-const isPasswordFormValid = computed(() => {
-  return username.value.trim() && password.value.trim()
-})
-
-const isSmsFormValid = computed(() => {
-  return isValidPhone.value && smsCode.value.trim().length === 6
+const isFormValid = computed(() => {
+  return isValidPhone.value && 
+         smsCode.value.trim().length === 6 &&
+         password.value.trim() && 
+         confirmPassword.value.trim() &&
+         password.value === confirmPassword.value &&
+         agreeTerms.value
 })
 
 // 监听输入变化，清除错误信息
-watch([username, password], () => {
-  usernameError.value = ''
-  passwordError.value = ''
-  error.value = ''
-})
-
-watch([phone, smsCode], () => {
+watch([phone, smsCode, password, confirmPassword, agreeTerms], () => {
   phoneError.value = ''
   smsCodeError.value = ''
+  passwordError.value = ''
+  confirmPasswordError.value = ''
+  termsError.value = ''
   error.value = ''
 })
 
@@ -218,44 +201,8 @@ const sendSmsCode = async () => {
   }
 }
 
-// 密码登录
-const onLogin = async () => {
-  // 表单验证
-  if (!username.value.trim()) {
-    usernameError.value = '请输入用户名'
-    return
-  }
-  if (!password.value.trim()) {
-    passwordError.value = '请输入密码'
-    return
-  }
-
-  error.value = ''
-  loading.value = true
-  
-  try {
-    const res = await userLogin(username.value, password.value)
-    if (res && res.code === 0) {
-      const token = res.data && (res.data.token || res.data)
-      if (token) {
-        userStore.setToken(token)
-        await loadUserData()
-        router.replace({ name: 'HomeFeed' })
-      } else {
-        error.value = '登录成功但未返回token'
-      }
-    } else {
-      error.value = (res && res.msg) || '登录失败'
-    }
-  } catch (e) {
-    error.value = '网络错误，请稍后重试'
-  } finally {
-    loading.value = false
-  }
-}
-
-// 验证码登录
-const onSmsLogin = async () => {
+// 注册
+const onRegister = async () => {
   // 表单验证
   if (!isValidPhone.value) {
     phoneError.value = '请输入正确的手机号'
@@ -269,17 +216,45 @@ const onSmsLogin = async () => {
     smsCodeError.value = '验证码应为6位数字'
     return
   }
+  if (!password.value.trim()) {
+    passwordError.value = '请输入密码'
+    return
+  }
+  if (password.value.length < 6) {
+    passwordError.value = '密码至少6位'
+    return
+  }
+  if (!confirmPassword.value.trim()) {
+    confirmPasswordError.value = '请确认密码'
+    return
+  }
+  if (password.value !== confirmPassword.value) {
+    confirmPasswordError.value = '两次输入的密码不一致'
+    return
+  }
+  if (!agreeTerms.value) {
+    termsError.value = '请同意用户协议和隐私政策'
+    return
+  }
 
   error.value = ''
   loading.value = true
   
   try {
-    // 这里应该调用验证码登录的API
-    // const res = await smsLoginApi(phone.value, smsCode.value)
-    console.log('验证码登录:', phone.value, smsCode.value)
+    // 这里应该调用注册的API
+    // const res = await registerApi({
+    //   phone: phone.value,
+    //   smsCode: smsCode.value,
+    //   password: password.value
+    // })
+    console.log('注册信息:', {
+      phone: phone.value,
+      smsCode: smsCode.value,
+      password: password.value
+    })
     
-    // 模拟登录成功
-    error.value = '验证码登录功能暂未实现，请使用密码登录'
+    // 模拟注册成功
+    error.value = '注册功能暂未实现，请使用现有账户登录'
     loading.value = false
   } catch (e) {
     error.value = '网络错误，请稍后重试'
@@ -287,31 +262,19 @@ const onSmsLogin = async () => {
   }
 }
 
-// 加载用户数据
-const loadUserData = async () => {
-  try {
-    const userRes = await getUserInfo()
-    if (userRes && userRes.code === 0) {
-      userStore.setUserInfo(userRes.data)
-      
-      // 获取通知个数
-      try {
-        const notificationsRes = await getNotificationsNumberApi(userRes.data.username)
-        if (notificationsRes && notificationsRes.code === 0) {
-          userStore.setNotificationsCount(parseInt(notificationsRes.data) || 0)
-        }
-      } catch (e) {
-        console.error('获取通知个数失败:', e)
-      }
-    }
-  } catch (e) {
-    console.error('获取用户信息失败:', e)
-  }
+// 显示用户协议
+const showTerms = () => {
+  alert('用户协议内容')
 }
 
-// 跳转到注册页面
-const goToRegister = () => {
-  router.push({ name: 'Register' })
+// 显示隐私政策
+const showPrivacy = () => {
+  alert('隐私政策内容')
+}
+
+// 跳转到登录页面
+const goToLogin = () => {
+  router.push({ name: 'Login' })
 }
 </script>
 
@@ -320,7 +283,7 @@ const goToRegister = () => {
   box-sizing: border-box;
 }
 
-.login-container {
+.register-container {
   min-height: 100vh;
   background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
   display: flex;
@@ -378,8 +341,8 @@ const goToRegister = () => {
   50% { transform: translateY(-20px) rotate(180deg); }
 }
 
-/* 登录卡片 */
-.login-card {
+/* 注册卡片 */
+.register-card {
   background: rgba(255, 255, 255, 0.95);
   backdrop-filter: blur(20px);
   border-radius: 24px;
@@ -389,6 +352,8 @@ const goToRegister = () => {
   box-shadow: 0 20px 40px rgba(0, 0, 0, 0.1);
   position: relative;
   z-index: 2;
+  max-height: 90vh;
+  overflow-y: auto;
 }
 
 /* Logo区域 */
@@ -415,34 +380,8 @@ const goToRegister = () => {
   margin: 0;
 }
 
-/* 登录方式切换 */
-.login-tabs {
-  display: flex;
-  background: #f5f5f5;
-  border-radius: 12px;
-  padding: 4px;
-  margin-bottom: 32px;
-}
-
-.tab-item {
-  flex: 1;
-  text-align: center;
-  padding: 12px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 500;
-  color: #666;
-  transition: all 0.3s ease;
-}
-
-.tab-item.active {
-  background: #ffffff;
-  color: #1DA1F2;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
 /* 表单样式 */
-.login-form {
+.register-form {
   margin-bottom: 24px;
 }
 
@@ -515,8 +454,60 @@ const goToRegister = () => {
   margin-left: 4px;
 }
 
-/* 登录按钮 */
-.login-btn {
+/* 协议同意 */
+.agreement-section {
+  margin-bottom: 24px;
+}
+
+.agreement-checkbox {
+  display: flex;
+  align-items: flex-start;
+  cursor: pointer;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.agreement-checkbox input[type="checkbox"] {
+  display: none;
+}
+
+.checkmark {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #e1e5e9;
+  border-radius: 4px;
+  margin-right: 12px;
+  flex-shrink: 0;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.agreement-checkbox input[type="checkbox"]:checked + .checkmark {
+  background: #1DA1F2;
+  border-color: #1DA1F2;
+}
+
+.agreement-checkbox input[type="checkbox"]:checked + .checkmark::after {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: white;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.agreement-checkbox input[type="checkbox"].error + .checkmark {
+  border-color: #e74c3c;
+}
+
+.agreement-text {
+  color: #666;
+}
+
+/* 注册按钮 */
+.register-btn {
   width: 100%;
   height: 56px;
   background: linear-gradient(135deg, #1DA1F2, #1991db);
@@ -531,23 +522,23 @@ const goToRegister = () => {
   overflow: hidden;
 }
 
-.login-btn:hover:not(:disabled) {
+.register-btn:hover:not(:disabled) {
   transform: translateY(-2px);
   box-shadow: 0 8px 25px rgba(29, 161, 242, 0.3);
 }
 
-.login-btn:active {
+.register-btn:active {
   transform: translateY(0);
 }
 
-.login-btn:disabled {
+.register-btn:disabled {
   background: #ccc;
   cursor: not-allowed;
   transform: none;
   box-shadow: none;
 }
 
-.login-btn.loading {
+.register-btn.loading {
   color: transparent;
 }
 
@@ -614,11 +605,11 @@ const goToRegister = () => {
 
 /* 移动端优化 */
 @media (max-width: 480px) {
-  .login-container {
+  .register-container {
     padding: 16px;
   }
   
-  .login-card {
+  .register-card {
     padding: 24px;
     border-radius: 20px;
   }
@@ -632,7 +623,7 @@ const goToRegister = () => {
     font-size: 15px;
   }
   
-  .login-btn {
+  .register-btn {
     height: 48px;
     font-size: 15px;
   }
@@ -644,12 +635,13 @@ const goToRegister = () => {
 
 /* 横屏优化 */
 @media (orientation: landscape) and (max-height: 600px) {
-  .login-container {
+  .register-container {
     padding: 10px;
   }
   
-  .login-card {
+  .register-card {
     padding: 20px;
+    max-height: 95vh;
   }
   
   .logo-section {
@@ -664,10 +656,8 @@ const goToRegister = () => {
     height: 44px;
   }
   
-  .login-btn {
+  .register-btn {
     height: 44px;
   }
 }
 </style>
-
-

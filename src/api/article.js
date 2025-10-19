@@ -39,3 +39,64 @@ export const getArticleCommentApi = (articleId) => {
     method: "GET",
   });
 };
+//点赞某个文章
+export const likeArticleApi = (username,articleid) => {
+  const url = isNative
+    ? `https://qianxunweimeng.cn:5361/article/likeSomeArticle?username=${username}&&articleid=${articleid}`
+    : `/article/likeSomeArticle?username=${username}&&articleid=${articleid}`;
+
+  return request({
+    url: url,
+    method: "POST",
+  });
+};
+//发布文章
+export const publishArticleApi = (content,categoryId,username,cover_img,createUserId,files = []) => {
+  const url = isNative
+    ? `https://qianxunweimeng.cn:5361/article`
+    : `/article`;
+
+  // 创建 FormData 对象
+  const formData = new FormData();
+  formData.append('content', content);
+  formData.append('categoryId', categoryId);
+  formData.append('username', username);
+  formData.append('cover_img', cover_img);
+  formData.append('createUserId', createUserId);
+  
+  // 添加图片文件，字段名为 file
+  files.forEach((file, index) => {
+    formData.append('file', file);
+  });
+
+  return request({
+    url: url,
+    method: "POST",
+    data: formData,
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  });
+};
+//获得某个用户的动态
+export const getUserArticleList = (username) => {
+  const url = isNative
+    ? `https://qianxunweimeng.cn:5361/article?username=${username}`
+    : `/article?username=${username}`;
+
+  return request({
+    url: url,
+    method: "GET",
+  });
+};
+//删除文章
+export const deleteArticleApi = (articleId) => {
+  const url = isNative
+    ? `https://qianxunweimeng.cn:5361/article/deletArticle?articleId=${articleId}`
+    : `/article/deletArticle?articleId=${articleId}`;
+
+  return request({
+    url: url,
+    method: "GET",
+  });
+};

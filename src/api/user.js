@@ -29,3 +29,48 @@ export const getUserInfo = () => {
   })
 }
 
+//得到某个用户信息
+export const getUserInfoApi = (username) => {
+  const isNative = Capacitor.isNativePlatform()
+  const baseURL = isNative 
+    ? 'https://qianxunweimeng.cn:5361'
+    : '/api'
+
+  return request({
+    url: isNative ? `${baseURL}/user/someoneinfo?username=${username}` : `/user/someoneinfo?username=${username}`,
+    method: 'get'
+  })
+}
+//获得自己的通知个数
+export const getNotificationsNumberApi = (username) => {
+  const isNative = Capacitor.isNativePlatform()
+  const baseURL = isNative 
+    ? 'https://qianxunweimeng.cn:5361'
+    : '/api'
+  return request({
+    url: isNative ? `${baseURL}/user/getnotificationsNumber?username=${username}` : `/user/getnotificationsNumber?username=${username}`,
+    method: 'get'
+  })
+}
+//获取关注列表
+export const getAttentionListApi = (username) => {
+  const isNative = Capacitor.isNativePlatform()
+  const baseURL = isNative 
+    ? 'https://qianxunweimeng.cn:5361'
+    : '/api'
+  return request({
+    url: isNative ? `${baseURL}/user/myfriend?username=${username}` : `/user/myfriend?username=${username}`,
+    method: 'get'
+  })
+}
+//搜索朋友
+export const searchFriendApi = (username) => {
+  const isNative = Capacitor.isNativePlatform()
+  const baseURL = isNative 
+    ? 'https://qianxunweimeng.cn:5361'
+    : '/api'
+  return request({
+    url: isNative ? `${baseURL}/user/searchsomeone?username=${username}` : `/user/searchsomeone?username=${username}`,
+    method: 'get'
+  })
+}

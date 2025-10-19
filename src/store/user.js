@@ -4,7 +4,8 @@ export const useUserStore = defineStore('user', {
   state: () => ({
     // 写死的token
     token: 'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJjbGFpbXMiOnsiaWQiOjEsInVzZXJuYW1lIjoiMTExMSJ9fQ.-r-9m5-y0HMZnNwIwCwYATpHETDQwPKuELkCmvJ3apc',
-    userInfo: null
+    userInfo: null,
+    notificationsCount: 0
   }),
   
   getters: {
@@ -26,6 +27,11 @@ export const useUserStore = defineStore('user', {
     // 设置用户信息
     setUserInfo(userInfo) {
       this.userInfo = userInfo
+    },
+    
+    // 设置通知个数
+    setNotificationsCount(count) {
+      this.notificationsCount = count
     }
   }
 })

@@ -1,10 +1,9 @@
 <template>
   <div class="twitter-container">
 
-    <!-- 加载状态 -->
+    <!-- 加载状态 - 骨架屏 -->
     <div v-if="loading" class="loading-container">
-      <div class="loading-spinner"></div>
-      <p>加载中...</p>
+      <SkeletonLoader type="article" :count="5" :show-images="true" />
     </div>
 
     <!-- 错误提示 -->
@@ -21,7 +20,7 @@
         class="tweet-item"
         @click="goToArticle(article.id)"
       >
-        <div class="tweet-avatar" @click.stop="goToUser()">
+        <div class="tweet-avatar" @click.stop="goToUser(article.username)">
           <img 
             v-if="article.userPic" 
             :src="article.userPic" 
@@ -36,12 +35,17 @@
             <span class="tweet-name">{{ article.nickname }}</span>
             <span class="tweet-username">@{{ article.username }}</span>
             <span class="tweet-time">· {{ article.uptonowTime }}</span>
+            <div class="tweet-menu" @click.stop="toggleMenu(article.id)">
+              <svg viewBox="0 0 24 24" class="menu-icon">
+                <path d="M12 3c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 7c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 7c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" fill="currentColor"/>
+              </svg>
+            </div>
           </div>
           
           <!-- 分类标签 -->
-          <div v-if="article.categoryName" class="category-tag">
+          <!-- <div v-if="article.categoryName" class="category-tag">
             #{{ article.categoryName }}
-          </div>
+          </div> -->
           
           <div class="tweet-text">
             {{ article.content }}
@@ -85,6 +89,7 @@
               :key="index"
               class="tweet-image"
               :class="{ 'single-image': getImageList(article).length === 1 }"
+              @click.stop="openImagePreview(article, index)"
             >
               <img :src="img" alt="文章图片" @error="handleImageError" />
             </div>
@@ -106,18 +111,12 @@
             <div 
               class="action-item like" 
               :class="{ 'liked': article.islike }"
-              @click.stop
+              @click.stop="handleLike(article)"
             >
               <svg viewBox="0 0 24 24" class="action-icon">
                 <path d="M16.697 5.5c-1.222-.06-2.679.51-3.89 2.16l-.805 1.09-.806-1.09C9.984 6.01 8.526 5.44 7.304 5.5c-1.243.07-2.349.78-2.91 1.91-.552 1.12-.633 2.78.479 4.82 1.074 1.97 3.257 4.27 7.129 6.61 3.87-2.34 6.052-4.64 7.126-6.61 1.111-2.04 1.03-3.7.477-4.82-.561-1.13-1.666-1.84-2.908-1.91zm4.187 7.69c-1.351 2.48-4.001 5.12-8.379 7.67l-.503.3-.504-.3c-4.379-2.55-7.029-5.19-8.382-7.67-1.36-2.5-1.41-4.86-.514-6.67.887-1.79 2.647-2.91 4.601-3.01 1.651-.09 3.368.56 4.798 2.01 1.429-1.45 3.146-2.1 4.796-2.01 1.954.1 3.714 1.22 4.601 3.01.896 1.81.846 4.17-.514 6.67z"></path>
               </svg>
               <span class="action-count">{{ article.likecont || 0 }}</span>
-            </div>
-            <div class="action-item" @click.stop>
-              <svg viewBox="0 0 24 24" class="action-icon">
-                <path d="M12 2.59l5.7 5.7-1.41 1.42L13 6.41V16h-2V6.41l-3.3 3.3-1.41-1.42L12 2.59zM21 15l-.02 3.51c0 1.38-1.12 2.49-2.5 2.49H5.5C4.11 21 3 19.88 3 18.5V15h2v3.5c0 .28.22.5.5.5h12.98c.28 0 .5-.22.5-.5L19 15h2z"></path>
-              </svg>
-              <span class="action-count"></span>
             </div>
           </div>
         </div>
@@ -135,19 +134,62 @@
         <path d="M12 5v14m-7-7h14" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round"/>
       </svg>
     </button>
+
+    <!-- 图片预览组件 -->
+    <PreviewImg 
+      v-model:visible="previewVisible"
+      :images="previewImages"
+      :initial-index="previewIndex"
+    />
+
+    <!-- 文章菜单 -->
+    <div v-if="showMenu" class="menu-overlay" @click="closeMenu">
+      <div class="menu-content" @click.stop>
+        <div v-if="isCurrentUserArticle" class="menu-item delete" @click="deleteArticle">
+          <svg viewBox="0 0 24 24" class="menu-item-icon">
+            <path d="M16 6V4.5C16 3.12 14.88 2 13.5 2h-3C9.12 2 8 3.12 8 4.5V6H3v2h1v9c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8h1V6h-5zM10 4.5c0-.28.22-.5.5-.5h3c.28 0 .5.22.5.5V6h-4V4.5zM18 18H6V8h12v10z" fill="currentColor"/>
+          </svg>
+          <span>删除</span>
+        </div>
+        <div v-else class="menu-item report" @click="reportArticle">
+          <svg viewBox="0 0 24 24" class="menu-item-icon">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" fill="currentColor"/>
+          </svg>
+          <span>举报</span>
+        </div>
+      </div>
+    </div>
     </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+// 定义组件名称，用于keep-alive缓存
+defineOptions({
+  name: 'ArticleList'
+})
+import { ref, onMounted, onActivated, onDeactivated } from 'vue'
 import { useRouter } from 'vue-router'
-import { getHomeArticleList } from '../../../api/article.js'
+import { getHomeArticleList, likeArticleApi, deleteArticleApi } from '@/api/article.js'
+import { useUserStore } from '@/store/user.js'
+import PreviewImg from '@/components/PreviewImg.vue'
+import SkeletonLoader from '@/components/SkeletonLoader.vue'
 
 const router = useRouter()
+const userStore = useUserStore()
 
 const articles = ref([])
 const loading = ref(false)
 const error = ref(null)
+
+// 图片预览相关
+const previewVisible = ref(false)
+const previewImages = ref([])
+const previewIndex = ref(0)
+
+// 菜单相关
+const showMenu = ref(false)
+const currentArticleId = ref(null)
+const isCurrentUserArticle = ref(false)
 
 // 获取文章列表
 const fetchArticles = async () => {
@@ -196,9 +238,10 @@ const goToArticle = (id) => {
   })
 }
 
-// 跳转到用户主页（写死ID）
-const goToUser = () => {
-  router.push({ name: 'UserProfile', params: { id: '1' } })
+// 跳转到用户主页
+const goToUser = (username) => {
+  if (!username) return
+  router.push({ name: 'UserProfile', params: { id: username } })
 }
 
 // 跳转到发布页
@@ -206,8 +249,111 @@ const goToPost = () => {
   router.push({ name: 'PostArticle' })
 }
 
+// 打开图片预览
+const openImagePreview = (article, index) => {
+  previewImages.value = getImageList(article)
+  previewIndex.value = index
+  previewVisible.value = true
+}
+
+// 点赞文章
+const handleLike = async (article) => {
+  if (!userStore.userInfo || !userStore.userInfo.username) {
+    console.error('用户未登录')
+    return
+  }
+
+  try {
+    const res = await likeArticleApi(userStore.userInfo.username, article.id)
+    if (res && res.code === 0) {
+      // 更新本地状态
+      const articleIndex = articles.value.findIndex(a => a.id === article.id)
+      if (articleIndex !== -1) {
+        articles.value[articleIndex].islike = !articles.value[articleIndex].islike
+        if (articles.value[articleIndex].islike) {
+          articles.value[articleIndex].likecont = (articles.value[articleIndex].likecont || 0) + 1
+        } else {
+          articles.value[articleIndex].likecont = Math.max((articles.value[articleIndex].likecont || 1) - 1, 0)
+        }
+      }
+    } else {
+      console.error('点赞失败:', res?.msg || '未知错误')
+    }
+  } catch (error) {
+    console.error('点赞请求失败:', error)
+  }
+}
+
+// 菜单相关函数
+const toggleMenu = (articleId) => {
+  currentArticleId.value = articleId
+  const article = articles.value.find(a => a.id === articleId)
+  isCurrentUserArticle.value = userStore.userInfo && article && article.username === userStore.userInfo.username
+  showMenu.value = true
+}
+
+const closeMenu = () => {
+  showMenu.value = false
+  currentArticleId.value = null
+}
+
+const deleteArticle = async () => {
+  if (!currentArticleId.value) return
+  
+  if (confirm('确定要删除这篇文章吗？此操作不可撤销。')) {
+    try {
+      const res = await deleteArticleApi(currentArticleId.value)
+      if (res && res.code === 0) {
+        // 删除成功，从列表中移除文章
+        const index = articles.value.findIndex(a => a.id === currentArticleId.value)
+        if (index !== -1) {
+          articles.value.splice(index, 1)
+        }
+        console.log('文章删除成功')
+      } else {
+        console.error('删除失败:', res?.msg || '未知错误')
+        alert('删除失败，请稍后重试')
+      }
+    } catch (error) {
+      console.error('删除文章失败:', error)
+      alert('删除失败，请检查网络连接')
+    }
+    closeMenu()
+  }
+}
+
+const reportArticle = () => {
+  if (!currentArticleId.value) return
+  
+  // TODO: 实现举报功能
+  console.log('举报文章:', currentArticleId.value)
+  alert('举报已提交，我们会尽快处理。')
+  closeMenu()
+}
+
+// 数据是否已加载过
+const hasLoaded = ref(false)
+
 onMounted(() => {
-  fetchArticles()
+  if (!hasLoaded.value) {
+    fetchArticles()
+    hasLoaded.value = true
+  }
+})
+
+// 组件被激活时（从缓存中恢复）
+onActivated(() => {
+  // 如果数据为空或需要刷新，则重新获取
+  if (articles.value.length === 0 || !hasLoaded.value) {
+    fetchArticles()
+    hasLoaded.value = true
+  }
+})
+
+// 组件被停用时（进入缓存）
+onDeactivated(() => {
+  // 可以在这里保存一些状态
+  console.log('ArticleList component deactivated')
 })
 </script>
 
@@ -353,25 +499,7 @@ onMounted(() => {
 
 /* 加载状态 */
 .loading-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 40px 16px;
-  color: #536471;
-}
-
-.loading-spinner {
-  width: 40px;
-  height: 40px;
-  border: 3px solid #eff3f4;
-  border-top-color: #1DA1F2;
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-
-@keyframes spin {
-  to { transform: rotate(360deg); }
+  padding: 0;
 }
 
 /* 错误状态 */
@@ -428,6 +556,7 @@ onMounted(() => {
   gap: 4px;
   margin-bottom: 4px;
   flex-wrap: wrap;
+  position: relative;
 }
 
 .tweet-name {
@@ -554,43 +683,88 @@ onMounted(() => {
   word-break: break-word;
 }
 
-/* 图片网格 */
+/* 图片网格 - 微信朋友圈样式 */
 .tweet-images {
   display: grid;
   gap: 4px;
   margin-bottom: 12px;
-  border-radius: 16px;
+  border-radius: 8px;
   overflow: hidden;
+  max-width: 400px;
 }
 
+/* 单张图片 */
 .tweet-images:has(.tweet-image:nth-child(1):last-child) {
   grid-template-columns: 1fr;
+  max-width: 300px;
 }
 
-.tweet-images:has(.tweet-image:nth-child(2)) {
-  grid-template-columns: 1fr 1fr;
+.tweet-images:has(.tweet-image:nth-child(1):last-child) .tweet-image {
+  max-height: 400px;
+  aspect-ratio: auto;
 }
 
-.tweet-images:has(.tweet-image:nth-child(3)) {
+/* 两张图片 */
+.tweet-images:has(.tweet-image:nth-child(2):last-child) {
   grid-template-columns: 1fr 1fr;
+  max-width: 300px;
 }
 
-.tweet-images:has(.tweet-image:nth-child(4)) {
+.tweet-images:has(.tweet-image:nth-child(2):last-child) .tweet-image {
+  aspect-ratio: 1;
+}
+
+/* 三张图片 - 微信朋友圈样式 */
+.tweet-images:has(.tweet-image:nth-child(3):last-child) {
+  grid-template-columns: 2fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  max-width: 300px;
+}
+
+.tweet-images:has(.tweet-image:nth-child(3):last-child) .tweet-image:nth-child(1) {
+  grid-row: 1 / 3;
+  aspect-ratio: 1;
+}
+
+.tweet-images:has(.tweet-image:nth-child(3):last-child) .tweet-image:nth-child(2),
+.tweet-images:has(.tweet-image:nth-child(3):last-child) .tweet-image:nth-child(3) {
+  aspect-ratio: 1;
+}
+
+/* 四张图片 - 2x2网格 */
+.tweet-images:has(.tweet-image:nth-child(4):last-child) {
   grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  max-width: 300px;
+}
+
+.tweet-images:has(.tweet-image:nth-child(4):last-child) .tweet-image {
+  aspect-ratio: 1;
+}
+
+/* 五张及以上图片 - 3列网格 */
+.tweet-images:has(.tweet-image:nth-child(5)) {
+  grid-template-columns: repeat(3, 1fr);
+  max-width: 300px;
+}
+
+.tweet-images:has(.tweet-image:nth-child(5)) .tweet-image {
+  aspect-ratio: 1;
 }
 
 .tweet-image {
   position: relative;
   overflow: hidden;
   background-color: #f7f9f9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: opacity 0.2s;
 }
 
-.tweet-image.single-image {
-  max-height: 400px;
-}
-
-.tweet-image:not(.single-image) {
-  aspect-ratio: 1;
+.tweet-image:hover {
+  opacity: 0.9;
 }
 
 .tweet-image img {
@@ -683,7 +857,7 @@ onMounted(() => {
 .fab {
   position: fixed;
   right: 16px;
-  bottom: 24px;
+  bottom: 100px;
   width: 56px;
   height: 56px;
   border-radius: 50%;
@@ -758,16 +932,117 @@ onMounted(() => {
   }
 }
 
+/* 三个点菜单按钮 */
+.tweet-menu {
+  margin-left: auto;
+  padding: 4px;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.tweet-menu:hover {
+  background-color: rgba(29, 161, 242, 0.1);
+}
+
+.menu-icon {
+  width: 18px;
+  height: 18px;
+  fill: #536471;
+  transition: fill 0.2s;
+}
+
+.tweet-menu:hover .menu-icon {
+  fill: #1DA1F2;
+}
+
+/* 菜单覆盖层 */
+.menu-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 2000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.menu-content {
+  background: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+  overflow: hidden;
+  min-width: 200px;
+  max-width: 300px;
+}
+
+.menu-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.menu-item:last-child {
+  border-bottom: none;
+}
+
+.menu-item:hover {
+  background-color: #f7f9f9;
+}
+
+.menu-item.delete:hover {
+  background-color: #fef2f2;
+}
+
+.menu-item.report:hover {
+  background-color: #f0f9ff;
+}
+
+.menu-item-icon {
+  width: 20px;
+  height: 20px;
+  fill: #536471;
+}
+
+.menu-item.delete .menu-item-icon {
+  fill: #ef4444;
+}
+
+.menu-item.report .menu-item-icon {
+  fill: #1DA1F2;
+}
+
+.menu-item span {
+  font-size: 16px;
+  font-weight: 500;
+  color: #0f1419;
+}
+
+.menu-item.delete span {
+  color: #ef4444;
+}
+
+.menu-item.report span {
+  color: #1DA1F2;
+}
+
 /* 横屏优化 */
 @media (orientation: landscape) and (max-height: 500px) {
   .header-content {
     height: 48px;
   }
   
-  .compose-tweet {
-    padding: 8px 16px;
-  }
-  
+  .compose-tweet,
   .tweet-item {
     padding: 8px 16px;
   }

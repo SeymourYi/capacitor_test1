@@ -1,12 +1,25 @@
 <template>
   <div id="app">
-    <keep-alive>
+    <keep-alive :include="cachedViews">
       <router-view />
     </keep-alive>
   </div>
 </template>
 
 <script setup>
+import { ref } from 'vue'
+
+// 需要缓存的组件列表
+const cachedViews = ref([
+  'HomeFeed',
+  'Notifications', 
+  'Me',
+  'ArticleList',
+  'UserProfile',
+  'AttentionList',
+  'SearchArticles',
+  'SearchUsers'
+])
 </script>
 
 <style>
