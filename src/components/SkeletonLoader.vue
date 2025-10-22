@@ -90,6 +90,54 @@
       </div>
     </div>
 
+    <!-- 文章详情骨架屏 -->
+    <div v-else-if="type === 'article-detail'" class="skeleton-article-detail">
+      <!-- 作者信息骨架屏 -->
+      <div class="skeleton-author-section">
+        <div class="skeleton-author-avatar"></div>
+        <div class="skeleton-author-info">
+          <div class="skeleton-author-name"></div>
+          <div class="skeleton-author-username"></div>
+        </div>
+      </div>
+      
+      <!-- 文章内容骨架屏 -->
+      <div class="skeleton-article-content">
+        <div class="skeleton-content-line"></div>
+        <div class="skeleton-content-line"></div>
+        <div class="skeleton-content-line short"></div>
+      </div>
+      
+      <!-- 文章图片骨架屏 -->
+      <div v-if="showImages" class="skeleton-article-images">
+        <div class="skeleton-article-image"></div>
+        <div class="skeleton-article-image"></div>
+      </div>
+      
+      <!-- 文章操作栏骨架屏 -->
+      <div class="skeleton-article-actions">
+        <div class="skeleton-action-item"></div>
+        <div class="skeleton-action-item"></div>
+        <div class="skeleton-action-item"></div>
+        <div class="skeleton-action-item"></div>
+      </div>
+      
+      <!-- 评论列表骨架屏 -->
+      <div class="skeleton-comments">
+        <div v-for="n in count" :key="n" class="skeleton-comment-item">
+          <div class="skeleton-comment-avatar"></div>
+          <div class="skeleton-comment-content">
+            <div class="skeleton-comment-header">
+              <div class="skeleton-comment-name"></div>
+              <div class="skeleton-comment-time"></div>
+            </div>
+            <div class="skeleton-comment-text"></div>
+            <div class="skeleton-comment-text short"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- 默认骨架屏 -->
     <div v-else class="skeleton-default">
       <div v-for="n in count" :key="n" class="skeleton-default-item">
@@ -106,7 +154,7 @@ defineProps({
   type: {
     type: String,
     default: 'default',
-    validator: (value) => ['article', 'user', 'notification', 'search', 'profile', 'default'].includes(value)
+    validator: (value) => ['article', 'user', 'notification', 'search', 'profile', 'article-detail', 'default'].includes(value)
   },
   count: {
     type: Number,
@@ -430,6 +478,127 @@ defineProps({
   height: 50px;
   margin-bottom: 12px;
   border-radius: 8px;
+}
+
+/* 文章详情骨架屏 */
+.skeleton-article-detail {
+  padding: 16px;
+}
+
+.skeleton-author-section {
+  display: flex;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.skeleton-author-avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+.skeleton-author-info {
+  flex: 1;
+}
+
+.skeleton-author-name {
+  width: 120px;
+  height: 18px;
+  margin-bottom: 6px;
+}
+
+.skeleton-author-username {
+  width: 80px;
+  height: 14px;
+}
+
+.skeleton-article-content {
+  margin-bottom: 20px;
+}
+
+.skeleton-content-line {
+  height: 18px;
+  margin-bottom: 12px;
+}
+
+.skeleton-content-line.short {
+  width: 70%;
+}
+
+.skeleton-article-images {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 20px;
+}
+
+.skeleton-article-image {
+  width: 120px;
+  height: 120px;
+  border-radius: 8px;
+}
+
+.skeleton-article-actions {
+  display: flex;
+  justify-content: space-around;
+  padding: 16px 0;
+  border-top: 1px solid #f0f0f0;
+  border-bottom: 1px solid #f0f0f0;
+  margin-bottom: 20px;
+}
+
+.skeleton-action-item {
+  width: 60px;
+  height: 20px;
+}
+
+.skeleton-comments {
+  margin-top: 20px;
+}
+
+.skeleton-comment-item {
+  display: flex;
+  padding: 16px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.skeleton-comment-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  margin-right: 12px;
+  flex-shrink: 0;
+}
+
+.skeleton-comment-content {
+  flex: 1;
+}
+
+.skeleton-comment-header {
+  display: flex;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.skeleton-comment-name {
+  width: 80px;
+  height: 16px;
+  margin-right: 8px;
+}
+
+.skeleton-comment-time {
+  width: 60px;
+  height: 14px;
+}
+
+.skeleton-comment-text {
+  height: 16px;
+  margin-bottom: 6px;
+}
+
+.skeleton-comment-text.short {
+  width: 60%;
 }
 
 /* 默认骨架屏 */

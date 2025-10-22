@@ -59,7 +59,7 @@
               </svg>
               <span class="retweet-text">{{ article.nickname }} 转推了</span>
             </div>
-            <div class="retweet-content">
+            <div class="retweet-content" @click="goToRetweetedArticle(article)">
               <div class="retweet-author">
                 <img 
                   v-if="article.beShareUserPic" 
@@ -96,13 +96,13 @@
           </div>
           
           <div class="tweet-actions">
-            <div class="action-item" @click.stop>
+            <div class="action-item comment" @click.stop="handleComment(article)">
               <svg viewBox="0 0 24 24" class="action-icon">
                 <path d="M1.751 10c0-4.42 3.584-8 8.005-8h4.366c4.49 0 8.129 3.64 8.129 8.13 0 2.96-1.607 5.68-4.196 7.11l-8.054 4.46v-3.69h-.067c-4.49.1-8.183-3.51-8.183-8.01zm8.005-6c-3.317 0-6.005 2.69-6.005 6 0 3.37 2.77 6.08 6.138 6.01l.351-.01h1.761v2.3l5.087-2.81c1.951-1.08 3.163-3.13 3.163-5.36 0-3.39-2.744-6.13-6.129-6.13H9.756z"></path>
               </svg>
               <span class="action-count">{{ article.commentcount || 0 }}</span>
             </div>
-            <div class="action-item retweet" @click.stop>
+            <div class="action-item retweet" @click.stop="handleRetweet(article)">
               <svg viewBox="0 0 24 24" class="action-icon">
                 <path d="M4.5 3.88l4.432 4.14-1.364 1.46L5.5 7.55V16c0 1.1.896 2 2 2H13v2H7.5c-2.209 0-4-1.79-4-4V7.55L1.432 9.48.068 8.02 4.5 3.88zM16.5 6H11V4h5.5c2.209 0 4 1.79 4 4v8.45l2.068-1.93 1.364 1.46-4.432 4.14-4.432-4.14 1.364-1.46 2.068 1.93V8c0-1.1-.896-2-2-2z"></path>
               </svg>
@@ -247,6 +247,78 @@ const goToUser = (username) => {
 // 跳转到发布页
 const goToPost = () => {
   router.push({ name: 'PostArticle' })
+}
+
+// 处理评论点击
+const handleComment = (article) => {
+  if (!article) return
+  router.push({ 
+    name: 'PostCommitArticle', 
+    query: { 
+      articleId: article.id,
+      articleContent: article.content,
+      articleAuthor: article.nickname,
+      articleAuthorPic: article.userPic,
+      articleImages: JSON.stringify(getImageList(article))
+    }
+  })
+}
+
+// 处理引用点击
+const handleRetweet = (article) => {
+  if (!article) return
+  router.push({ 
+    name: 'PostRepeatArticle', 
+    query: { 
+      articleId: article.id,
+      articleContent: article.content,
+      articleAuthor: article.nickname,
+      articleAuthorPic: article.userPic,
+      articleImages: JSON.stringify(getImageList(article))
+    }
+  })
+}
+
+// 跳转到被引用的文章详情页
+const goToRetweetedArticle = (article) => {
+  console.log('主页 - 点击被引用内容')
+  console.log('文章数据:', article)
+  
+  if (!article) {
+    console.error('文章数据不存在')
+    return
+  }
+  
+  // 检查是否有被引用内容
+  if (!article.userShare || !article.beShareContent) {
+    console.error('当前文章没有被引用内容')
+    return
+  }
+  
+  // 检查多个可能的ID字段
+  const retweetedArticleId = article.beShareId || 
+                            article.beShareArticleId || 
+                            article.originalArticleId ||
+                            article.beShareCreaterArticleId
+  
+  console.log('被引用文章ID:', retweetedArticleId)
+  
+  if (!retweetedArticleId) {
+    console.error('被引用文章ID不存在，可用字段:', Object.keys(article).filter(key => key.includes('Share') || key.includes('Article')))
+    console.error('被引用内容相关字段:', {
+      userShare: article.userShare,
+      beShareContent: article.beShareContent,
+      beShareNickName: article.beShareNickName,
+      beShareCreaterUserName: article.beShareCreaterUserName
+    })
+    return
+  }
+  
+  console.log('准备跳转到被引用文章:', retweetedArticleId)
+  router.push({ 
+    name: 'ArticleInfo', 
+    params: { id: retweetedArticleId } 
+  })
 }
 
 // 打开图片预览
@@ -609,6 +681,12 @@ onDeactivated(() => {
 
 .retweet-content {
   padding: 12px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.retweet-content:hover {
+  background-color: rgba(0, 0, 0, 0.02);
 }
 
 .retweet-author {
@@ -793,6 +871,22 @@ onDeactivated(() => {
   transition: background-color 0.2s;
 }
 
+.action-item:hover {
+  background-color: rgba(29, 161, 242, 0.1);
+}
+
+.action-item.comment:hover {
+  background-color: rgba(29, 161, 242, 0.1);
+}
+
+.action-item.retweet:hover {
+  background-color: rgba(0, 186, 124, 0.1);
+}
+
+.action-item.like:hover {
+  background-color: rgba(249, 24, 128, 0.1);
+}
+
 .action-icon {
   width: 18px;
   height: 18px;
@@ -816,6 +910,18 @@ onDeactivated(() => {
 }
 
 .action-item:active .action-count {
+  color: #1DA1F2;
+}
+
+.action-item.comment:active {
+  background-color: rgba(29, 161, 242, 0.1);
+}
+
+.action-item.comment:active .action-icon {
+  fill: #1DA1F2;
+}
+
+.action-item.comment:active .action-count {
   color: #1DA1F2;
 }
 

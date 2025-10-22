@@ -96,7 +96,7 @@
               placeholder="验证码" 
               v-model="smsCode"
               :class="{ error: smsCodeError }"
-              maxlength="6"
+              maxlength="4"
             />
             <div class="input-icon">🔢</div>
             <button 
@@ -119,6 +119,11 @@
           <div v-if="loading" class="btn-spinner"></div>
           {{ loading ? '登录中...' : '登录' }}
         </button>
+
+        <!-- 开发环境显示验证码 -->
+        <div v-if="generatedCode && isCodeSent" class="debug-info">
+          <p>开发模式 - 验证码: {{ generatedCode }}</p>
+        </div>
       </div>
 
       <!-- 错误提示 -->
@@ -139,7 +144,7 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { userLogin, getUserInfo, getNotificationsNumberApi } from '@/api/user.js'
+import { userLogin, getUserInfo, getNotificationsNumberApi, sendSmsCodeApi, smsLogin } from '@/api/user.js'
 import { useUserStore } from '@/store/user.js'
 
 const router = useRouter()
@@ -160,6 +165,8 @@ const smsCode = ref('')
 const phoneError = ref('')
 const smsCodeError = ref('')
 const smsCountdown = ref(0)
+const generatedCode = ref('') // 存储生成的验证码
+const isCodeSent = ref(false) // 是否已发送验证码
 
 // 通用状态
 const loading = ref(false)
@@ -176,7 +183,10 @@ const isPasswordFormValid = computed(() => {
 })
 
 const isSmsFormValid = computed(() => {
-  return isValidPhone.value && smsCode.value.trim().length === 6
+  return isValidPhone.value && 
+         smsCode.value.trim().length === 4 && 
+         isCodeSent.value &&
+         smsCode.value.trim() === generatedCode.value
 })
 
 // 监听输入变化，清除错误信息
@@ -192,6 +202,25 @@ watch([phone, smsCode], () => {
   error.value = ''
 })
 
+// 监听验证码输入，实时验证
+watch(smsCode, (newCode) => {
+  if (newCode.length === 4 && isCodeSent.value) {
+    if (newCode === generatedCode.value) {
+      smsCodeError.value = ''
+      console.log('验证码正确')
+    } else {
+      smsCodeError.value = '验证码错误'
+    }
+  } else if (newCode.length < 4) {
+    smsCodeError.value = ''
+  }
+})
+
+// 生成4位随机验证码
+const generateCode = () => {
+  return Math.floor(1000 + Math.random() * 9000).toString()
+}
+
 // 发送验证码
 const sendSmsCode = async () => {
   if (!isValidPhone.value) {
@@ -200,18 +229,31 @@ const sendSmsCode = async () => {
   }
   
   try {
-    // 这里应该调用发送验证码的API
-    // const res = await sendSmsCodeApi(phone.value)
-    console.log('发送验证码到:', phone.value)
+    // 生成4位随机验证码
+    generatedCode.value = generateCode()
+    console.log('生成的验证码:', generatedCode.value)
     
-    // 模拟发送成功，开始倒计时
-    smsCountdown.value = 60
-    const timer = setInterval(() => {
-      smsCountdown.value--
-      if (smsCountdown.value <= 0) {
-        clearInterval(timer)
-      }
-    }, 1000)
+    // 调用发送验证码的API
+    const res = await sendSmsCodeApi(phone.value, generatedCode.value)
+    console.log('发送验证码API响应:', res)
+    
+    if (res.code === 0) {
+      // 发送成功，开始倒计时
+      isCodeSent.value = true
+      smsCountdown.value = 60
+      const timer = setInterval(() => {
+        smsCountdown.value--
+        if (smsCountdown.value <= 0) {
+          clearInterval(timer)
+        }
+      }, 1000)
+      
+      // 清除之前的错误信息
+      error.value = ''
+      smsCodeError.value = ''
+    } else {
+      error.value = res.msg || '发送验证码失败，请稍后重试'
+    }
   } catch (e) {
     console.error('发送验证码失败:', e)
     error.value = '发送验证码失败，请稍后重试'
@@ -265,8 +307,16 @@ const onSmsLogin = async () => {
     smsCodeError.value = '请输入验证码'
     return
   }
-  if (smsCode.value.trim().length !== 6) {
-    smsCodeError.value = '验证码应为6位数字'
+  if (smsCode.value.trim().length !== 4) {
+    smsCodeError.value = '验证码应为4位数字'
+    return
+  }
+  if (!isCodeSent.value) {
+    smsCodeError.value = '请先获取验证码'
+    return
+  }
+  if (smsCode.value.trim() !== generatedCode.value) {
+    smsCodeError.value = '验证码错误，请重新输入'
     return
   }
 
@@ -274,15 +324,34 @@ const onSmsLogin = async () => {
   loading.value = true
   
   try {
-    // 这里应该调用验证码登录的API
-    // const res = await smsLoginApi(phone.value, smsCode.value)
-    console.log('验证码登录:', phone.value, smsCode.value)
+    // 验证码正确，使用手机号作为username调用验证码登录接口
+    console.log('验证码验证成功，执行登录:', phone.value)
     
-    // 模拟登录成功
-    error.value = '验证码登录功能暂未实现，请使用密码登录'
-    loading.value = false
+    // 调用验证码登录接口，只传入手机号作为username参数，不传password
+    const res = await smsLogin(phone.value)
+    
+    if (res && res.code === 0) {
+      const token = res.data && (res.data.token || res.data)
+      if (token) {
+        userStore.setToken(token)
+        await loadUserData()
+        router.replace({ name: 'HomeFeed' })
+      } else {
+        error.value = '登录成功但未返回token'
+      }
+    } else {
+      error.value = (res && res.msg) || '登录失败'
+    }
+    
+    // 重置验证码相关状态
+    smsCode.value = ''
+    generatedCode.value = ''
+    isCodeSent.value = false
+    
   } catch (e) {
+    console.error('验证码登录失败:', e)
     error.value = '网络错误，请稍后重试'
+  } finally {
     loading.value = false
   }
 }
@@ -579,6 +648,18 @@ const goToRegister = () => {
   display: flex;
   align-items: center;
   color: #c33;
+}
+
+/* 调试信息 */
+.debug-info {
+  margin-top: 12px;
+  padding: 8px 12px;
+  background: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 6px;
+  color: #0369a1;
+  font-size: 12px;
+  text-align: center;
 }
 
 .error-icon {

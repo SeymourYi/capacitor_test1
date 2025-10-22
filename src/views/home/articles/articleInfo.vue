@@ -8,10 +8,7 @@
             <path d="M7.414 13l5.043 5.04-1.414 1.42L3.586 12l7.457-7.46 1.414 1.42L7.414 11H21v2H7.414z"></path>
           </svg>
         </div>
-        <div class="header-logo">
-          <div class="logo-icon">🐦</div>
-        </div>
-        <h1 class="header-title">推文</h1>
+        <h1 class="header-title">文章详情</h1>
         <div v-if="article" class="header-menu" @click="toggleMenu">
           <svg viewBox="0 0 24 24" class="menu-icon">
             <path d="M12 3c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 7c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 7c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z" fill="currentColor"/>
@@ -20,10 +17,9 @@
       </div>
     </div>
 
-    <!-- 加载状态 -->
+    <!-- 加载状态 - 骨架屏 -->
     <div v-if="loading" class="loading-container">
-      <div class="loading-spinner"></div>
-      <p>加载中...</p>
+      <SkeletonLoader type="article-detail" :count="3" :show-images="true" />
     </div>
 
     <!-- 错误提示 -->
@@ -70,7 +66,7 @@
             </svg>
             <span class="retweet-text">{{ article.nickname }} 转推了</span>
           </div>
-          <div class="retweet-content">
+          <div class="retweet-content" @click="goToRetweetedArticle">
             <div class="retweet-author">
               <img 
                 v-if="article.beShareUserPic" 
@@ -247,6 +243,7 @@ import { useRouter, useRoute } from 'vue-router'
 import { getArticleDetail, getArticleCommentApi, likeArticleApi, deleteArticleApi } from '@/api/article.js'
 import { useUserStore } from '@/store/user.js'
 import PreviewImg from '@/components/PreviewImg.vue'
+import SkeletonLoader from '@/components/SkeletonLoader.vue'
 
 const router = useRouter()
 const route = useRoute()
@@ -377,6 +374,48 @@ const goToRepeat = () => {
   })
 }
 
+// 跳转到被引用的文章详情页
+const goToRetweetedArticle = () => {
+  console.log('文章详情页 - 点击被引用内容')
+  console.log('当前文章数据:', article.value)
+  
+  if (!article.value) {
+    console.error('文章数据不存在')
+    return
+  }
+  
+  // 检查是否有被引用内容
+  if (!article.value.userShare || !article.value.beShareContent) {
+    console.error('当前文章没有被引用内容')
+    return
+  }
+  
+  // 检查多个可能的ID字段
+  const retweetedArticleId = article.value.beShareId || 
+                            article.value.beShareArticleId || 
+                            article.value.originalArticleId ||
+                            article.value.beShareCreaterArticleId
+  
+  console.log('被引用文章ID:', retweetedArticleId)
+  
+  if (!retweetedArticleId) {
+    console.error('被引用文章ID不存在，可用字段:', Object.keys(article.value).filter(key => key.includes('Share') || key.includes('Article')))
+    console.error('被引用内容相关字段:', {
+      userShare: article.value.userShare,
+      beShareContent: article.value.beShareContent,
+      beShareNickName: article.value.beShareNickName,
+      beShareCreaterUserName: article.value.beShareCreaterUserName
+    })
+    return
+  }
+  
+  console.log('准备跳转到被引用文章:', retweetedArticleId)
+  router.push({ 
+    name: 'ArticleInfo', 
+    params: { id: retweetedArticleId } 
+  })
+}
+
 // 打开图片预览
 const openImagePreview = (article, index) => {
   previewImages.value = getImageList(article)
@@ -491,6 +530,7 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  position: relative;
 }
 
 .back-button {
@@ -515,23 +555,15 @@ onMounted(() => {
   fill: #0f1419;
 }
 
-.header-logo {
-  display: flex;
-  align-items: center;
-  margin-right: 12px;
-}
-
-.logo-icon {
-  font-size: 24px;
-  margin-right: 8px;
-}
 
 .header-title {
   font-size: 20px;
   font-weight: 700;
   margin: 0;
   color: #0f1419;
-  flex: 1;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 .header-menu {
@@ -561,7 +593,10 @@ onMounted(() => {
 }
 
 /* 加载和错误状态 */
-.loading-container,
+.loading-container {
+  padding: 0;
+}
+
 .error-container {
   display: flex;
   flex-direction: column;
@@ -714,6 +749,12 @@ onMounted(() => {
 
 .retweet-content {
   padding: 16px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.retweet-content:hover {
+  background-color: rgba(0, 0, 0, 0.02);
 }
 
 .retweet-author {

@@ -1,26 +1,37 @@
 <template>
   <div class="layout">
-    <!-- 顶部栏：左侧头像 + 中间标题 + 品牌logo -->
+    <!-- 顶部栏：根据页面显示不同内容 -->
     <div class="topbar">
-      <div class="avatar" @click="goToUserProfile">
-        <img 
-          v-if="userStore.userInfo && userStore.userInfo.userPic" 
-          :src="userStore.userInfo.userPic" 
-          class="avatar-img" 
-          :alt="userStore.userInfo.nickname"
-          @error="handleImageError"
-        />
-        <div v-else class="avatar-placeholder"></div>
-      </div>
-      <div class="header-logo">
-        <div class="logo-icon">🐦</div>
-      </div>
-      <div class="title">{{ currentTitle }}</div>
-      <div class="add-button" @click="toggleAddMenu">
-        <svg viewBox="0 0 24 24" class="add-icon">
-          <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-        </svg>
-      </div>
+      <!-- 主页和我的页面：左侧头像 + 中间logo + 右侧加号 -->
+      <template v-if="isHome || isMe">
+        <div class="avatar" @click="goToUserProfile">
+          <img 
+            v-if="userStore.userInfo && userStore.userInfo.userPic" 
+            :src="userStore.userInfo.userPic" 
+            class="avatar-img" 
+            :alt="userStore.userInfo.nickname"
+            @error="handleImageError"
+          />
+          <div v-else class="avatar-placeholder"></div>
+        </div>
+        <div class="header-logo">
+          <div class="logo-icon">🐦</div>
+        </div>
+        <div class="add-button" @click="toggleAddMenu">
+          <svg viewBox="0 0 24 24" class="add-icon">
+            <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+        </div>
+      </template>
+      
+      <!-- 通知页面：左侧logo + 中间标题 + 右侧全部已读按钮 -->
+      <template v-else-if="isNotice">
+        <div class="header-logo-left">
+          <div class="logo-icon">🐦</div>
+        </div>
+        <div class="header-title-center">通知</div>
+        <button class="mark-all-read-btn" @click="markAllAsRead">全部已读</button>
+      </template>
     </div>
 
     <!-- 加号按钮下拉菜单 -->
@@ -119,10 +130,40 @@ const goNotice = () => {
   if (!isNotice.value) router.push({ name: 'Notifications' })
 }
 
+// 标记所有通知为已读
+const markAllAsRead = async () => {
+  if (!userStore.userInfo || !userStore.userInfo.username) {
+    console.error('用户未登录')
+    return
+  }
+
+  try {
+    const { readallnotificationApi } = await import('@/api/notice.js')
+    const res = await readallnotificationApi(userStore.userInfo.username)
+    if (res && res.code === 0) {
+      // 清空通知个数
+      userStore.setNotificationsCount(0)
+      console.log('所有通知已标记为已读')
+      
+      // 刷新通知页面
+      if (isNotice.value) {
+        // 触发通知页面刷新
+        window.dispatchEvent(new CustomEvent('notifications-refresh'))
+      }
+    } else {
+      console.error('全部已读失败:', res?.msg || '未知错误')
+    }
+  } catch (error) {
+    console.error('全部已读请求失败:', error)
+  }
+}
+
 
 const goToUserProfile = () => {
-  if (userStore.userInfo && userStore.userInfo.id) {
-    router.push({ name: 'UserProfile', params: { id: userStore.userInfo.id } })
+  if (userStore.userInfo && userStore.userInfo.username) {
+    router.push({ name: 'UserProfile', params: { id: userStore.userInfo.username } })
+  } else {
+    console.error('用户信息不完整，无法跳转到用户主页')
   }
 }
 
@@ -209,7 +250,9 @@ const handleScan = () => {
 .header-logo {
   display: flex;
   align-items: center;
-  margin-right: 12px;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
 }
 
 .logo-icon {
@@ -217,12 +260,50 @@ const handleScan = () => {
   margin-right: 8px;
 }
 
-.title {
+.header-title {
   font-size: 20px;
   font-weight: 700;
   color: #0f1419;
-  flex: 1;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
 }
+
+/* 通知页面专用样式 */
+.header-logo-left {
+  display: flex;
+  align-items: center;
+}
+
+.header-title-center {
+  font-size: 20px;
+  font-weight: 700;
+  color: #0f1419;
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.mark-all-read-btn {
+  background: #1DA1F2;
+  color: #fff;
+  border: none;
+  border-radius: 20px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.mark-all-read-btn:hover {
+  background: #1a8cd8;
+}
+
+.mark-all-read-btn:active {
+  background: #0f7ab8;
+}
+
 
 /* 加号按钮 */
 .add-button {

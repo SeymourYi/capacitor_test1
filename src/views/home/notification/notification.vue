@@ -13,14 +13,6 @@
 
     <!-- 通知列表 -->
     <div v-else-if="notifications.length > 0" class="notifications">
-      <!-- 顶部操作栏 -->
-      <div class="notifications-header">
-        <div class="header-logo">
-          <div class="logo-icon">🐦</div>
-        </div>
-        <div class="header-title">通知</div>
-        <button class="mark-all-read-btn" @click="markAllAsRead">全部已读</button>
-      </div>
       <div 
         v-for="notice in notifications" 
         :key="notice.id" 
@@ -67,7 +59,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onActivated, onDeactivated } from 'vue'
+import { ref, onMounted, onActivated, onDeactivated, onUnmounted } from 'vue'
 import { getnoticeApi, readsomeonenotificationApi, readallnotificationApi } from '@/api/notice.js'
 import { getNotificationsNumberApi } from '@/api/user.js'
 import { useUserStore } from '@/store/user.js'
@@ -211,6 +203,19 @@ onActivated(() => {
 onDeactivated(() => {
   console.log('Notifications component deactivated')
 })
+
+// 监听全部已读事件
+const handleNotificationsRefresh = () => {
+  fetchNotifications()
+}
+
+onMounted(() => {
+  window.addEventListener('notifications-refresh', handleNotificationsRefresh)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('notifications-refresh', handleNotificationsRefresh)
+})
 </script>
 
 <style scoped>
@@ -230,58 +235,6 @@ onDeactivated(() => {
 /* 通知列表 */
 .notifications { display: flex; flex-direction: column; }
 
-/* 通知头部 */
-.notifications-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 12px 16px;
-  border-bottom: 1px solid #eff3f4;
-  background: #ffffff;
-  position: sticky;
-  top: 0;
-  z-index: 10;
-}
-
-.header-logo {
-  display: flex;
-  align-items: center;
-  margin-right: 12px;
-}
-
-.logo-icon {
-  font-size: 24px;
-  margin-right: 8px;
-}
-
-.header-title {
-  font-size: 18px;
-  font-weight: 700;
-  color: #0f1419;
-  flex: 1;
-}
-
-.mark-all-read-btn {
-  padding: 6px 12px;
-  background: #1DA1F2;
-  color: #ffffff;
-  border: none;
-  border-radius: 16px;
-  font-size: 14px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-
-.mark-all-read-btn:hover {
-  background: #1991db;
-  transform: translateY(-1px);
-}
-
-.mark-all-read-btn:active {
-  background: #0d8bd9;
-  transform: translateY(0);
-}
 .item { 
   display: flex; 
   gap: 12px; 
