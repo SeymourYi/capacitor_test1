@@ -22,7 +22,7 @@ const getToken = () => {
 
 // 创建axios实例（用于Web环境）
 const axiosInstance = axios.create({
-  baseURL: '/api', // 使用代理路径
+  baseURL: 'https://qianxunweimeng.cn:5361', // 统一使用固定域名
   timeout: 10000, // 请求超时时间
   headers: {
     'Content-Type': 'application/json',
