@@ -1,8 +1,23 @@
 <template>
-  <div class="twitter-container">
+  <div class="twitter-container" @touchstart="handleTouchStart" @touchmove="handleTouchMove" @touchend="handleTouchEnd">
+
+    <!-- 下拉刷新指示器 -->
+    <div v-if="isPulling" class="pull-refresh-indicator" :style="{ transform: `translateY(${pullDistance}px)` }">
+      <div class="refresh-content">
+        <div v-if="!isRefreshing" class="refresh-icon" :style="{ transform: `rotate(${pullDistance * 2}deg)` }">
+          <svg viewBox="0 0 24 24" class="refresh-svg">
+            <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z" fill="currentColor"/>
+          </svg>
+        </div>
+        <div v-else class="refresh-spinner">
+          <div class="spinner"></div>
+        </div>
+        <span class="refresh-text">{{ isRefreshing ? '正在刷新...' : pullDistance > 60 ? '释放刷新' : '下拉刷新' }}</span>
+      </div>
+    </div>
 
     <!-- 加载状态 - 骨架屏 -->
-    <div v-if="loading" class="loading-container">
+    <div v-if="loading && !isRefreshing" class="loading-container">
       <SkeletonLoader type="article" :count="5" :show-images="true" />
     </div>
 
@@ -13,7 +28,7 @@
     </div>
 
     <!-- 推文列表 -->
-    <div v-else class="tweets-list">
+    <div v-else-if="articles && articles.length > 0" class="tweets-list">
       <div 
         v-for="article in articles" 
         :key="article.id" 
@@ -122,10 +137,11 @@
         </div>
       </div>
       
-      <!-- 空状态 -->
-      <div v-if="articles.length === 0" class="empty-state">
-        <p>暂无内容</p>
-      </div>
+    </div>
+    
+    <!-- 空状态 -->
+    <div v-else-if="!articles || articles.length === 0" class="empty-state">
+      <p>暂无内容</p>
     </div>
     
     <!-- 右下发布按钮 -->
@@ -167,19 +183,21 @@
 defineOptions({
   name: 'ArticleList'
 })
-import { ref, onMounted, onActivated, onDeactivated } from 'vue'
+import { ref, computed, onMounted, onActivated, onDeactivated } from 'vue'
 import { useRouter } from 'vue-router'
-import { getHomeArticleList, likeArticleApi, deleteArticleApi } from '@/api/article.js'
 import { useUserStore } from '@/store/user.js'
+import { useArticleStore } from '@/store/article.js'
 import PreviewImg from '@/components/PreviewImg.vue'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
 
 const router = useRouter()
 const userStore = useUserStore()
+const articleStore = useArticleStore()
 
-const articles = ref([])
-const loading = ref(false)
-const error = ref(null)
+// 使用 store 中的数据
+const articles = computed(() => articleStore.articles)
+const loading = computed(() => articleStore.loading)
+const error = computed(() => articleStore.error)
 
 // 图片预览相关
 const previewVisible = ref(false)
@@ -191,26 +209,17 @@ const showMenu = ref(false)
 const currentArticleId = ref(null)
 const isCurrentUserArticle = ref(false)
 
-// 获取文章列表
-const fetchArticles = async () => {
-  loading.value = true
-  error.value = null
-  
-  try {
-    const response = await getHomeArticleList(1) // 使用userid=1
-    console.log('API返回数据:', response)
-    
-    if (response.code === 0) {
-      articles.value = response.data || []
-    } else {
-      error.value = response.msg || '获取数据失败'
-    }
-  } catch (err) {
-    console.error('获取文章列表失败:', err)
-    error.value = '网络错误，请稍后重试'
-  } finally {
-    loading.value = false
-  }
+// 下拉刷新相关
+const isPulling = ref(false)
+const isRefreshing = ref(false)
+const pullDistance = ref(0)
+const startY = ref(0)
+const currentY = ref(0)
+const maxPullDistance = 80
+
+// 获取文章列表 - 使用 store 方法
+const fetchArticles = async (forceRefresh = false) => {
+  return await articleStore.fetchArticles(forceRefresh)
 }
 
 // 判断是否有图片
@@ -328,32 +337,14 @@ const openImagePreview = (article, index) => {
   previewVisible.value = true
 }
 
-// 点赞文章
+// 点赞文章 - 使用 store 方法
 const handleLike = async (article) => {
   if (!userStore.userInfo || !userStore.userInfo.username) {
     console.error('用户未登录')
     return
   }
 
-  try {
-    const res = await likeArticleApi(userStore.userInfo.username, article.id)
-    if (res && res.code === 0) {
-      // 更新本地状态
-      const articleIndex = articles.value.findIndex(a => a.id === article.id)
-      if (articleIndex !== -1) {
-        articles.value[articleIndex].islike = !articles.value[articleIndex].islike
-        if (articles.value[articleIndex].islike) {
-          articles.value[articleIndex].likecont = (articles.value[articleIndex].likecont || 0) + 1
-        } else {
-          articles.value[articleIndex].likecont = Math.max((articles.value[articleIndex].likecont || 1) - 1, 0)
-        }
-      }
-    } else {
-      console.error('点赞失败:', res?.msg || '未知错误')
-    }
-  } catch (error) {
-    console.error('点赞请求失败:', error)
-  }
+  await articleStore.likeArticle(userStore.userInfo.username, article.id)
 }
 
 // 菜单相关函数
@@ -373,22 +364,9 @@ const deleteArticle = async () => {
   if (!currentArticleId.value) return
   
   if (confirm('确定要删除这篇文章吗？此操作不可撤销。')) {
-    try {
-      const res = await deleteArticleApi(currentArticleId.value)
-      if (res && res.code === 0) {
-        // 删除成功，从列表中移除文章
-        const index = articles.value.findIndex(a => a.id === currentArticleId.value)
-        if (index !== -1) {
-          articles.value.splice(index, 1)
-        }
-        console.log('文章删除成功')
-      } else {
-        console.error('删除失败:', res?.msg || '未知错误')
-        alert('删除失败，请稍后重试')
-      }
-    } catch (error) {
-      console.error('删除文章失败:', error)
-      alert('删除失败，请检查网络连接')
+    const success = await articleStore.deleteArticle(currentArticleId.value)
+    if (!success) {
+      alert('删除失败，请稍后重试')
     }
     closeMenu()
   }
@@ -403,28 +381,72 @@ const reportArticle = () => {
   closeMenu()
 }
 
-// 数据是否已加载过
-const hasLoaded = ref(false)
+// 下拉刷新处理函数
+const handleTouchStart = (e) => {
+  if (window.scrollY === 0) {
+    startY.value = e.touches[0].clientY
+    isPulling.value = true
+  }
+}
+
+const handleTouchMove = (e) => {
+  if (!isPulling.value || isRefreshing.value) return
+  
+  currentY.value = e.touches[0].clientY
+  const deltaY = currentY.value - startY.value
+  
+  if (deltaY > 0) {
+    e.preventDefault()
+    pullDistance.value = Math.min(deltaY * 0.5, maxPullDistance)
+  }
+}
+
+const handleTouchEnd = async () => {
+  if (!isPulling.value || isRefreshing.value) return
+  
+  if (pullDistance.value > 60) {
+    isRefreshing.value = true
+    pullDistance.value = 60
+    
+    try {
+      // 强制刷新数据
+      await fetchArticles(true)
+    } finally {
+      isRefreshing.value = false
+      pullDistance.value = 0
+      isPulling.value = false
+    }
+  } else {
+    pullDistance.value = 0
+    isPulling.value = false
+  }
+}
 
 onMounted(() => {
-  if (!hasLoaded.value) {
+  console.log('ArticleList onMounted - hasLoaded:', articleStore.hasLoaded, 'articles count:', articles.value?.length || 0)
+  // 如果 store 中没有数据或需要刷新，则获取数据
+  if (!articleStore.hasLoaded || articleStore.shouldRefresh()) {
+    console.log('ArticleList: 首次加载或需要刷新')
     fetchArticles()
-    hasLoaded.value = true
+  } else {
+    console.log('ArticleList: 使用缓存数据，文章数量:', articles.value?.length || 0)
   }
 })
 
 // 组件被激活时（从缓存中恢复）
 onActivated(() => {
-  // 如果数据为空或需要刷新，则重新获取
-  if (articles.value.length === 0 || !hasLoaded.value) {
+  console.log('ArticleList onActivated - hasLoaded:', articleStore.hasLoaded, 'articles count:', articles.value?.length || 0)
+  // 如果 store 中没有数据或需要刷新，则获取数据
+  if (!articleStore.hasLoaded || articleStore.shouldRefresh()) {
+    console.log('ArticleList: 重新获取数据')
     fetchArticles()
-    hasLoaded.value = true
+  } else {
+    console.log('ArticleList: 使用缓存数据，文章数量:', articles.value?.length || 0)
   }
 })
 
 // 组件被停用时（进入缓存）
 onDeactivated(() => {
-  // 可以在这里保存一些状态
   console.log('ArticleList component deactivated')
 })
 </script>
@@ -1140,6 +1162,68 @@ onDeactivated(() => {
 
 .menu-item.report span {
   color: #1DA1F2;
+}
+
+/* 下拉刷新样式 */
+.pull-refresh-indicator {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background: #ffffff;
+  border-bottom: 1px solid #eff3f4;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.3s ease;
+}
+
+.refresh-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #536471;
+}
+
+.refresh-icon {
+  width: 20px;
+  height: 20px;
+  transition: transform 0.3s ease;
+}
+
+.refresh-svg {
+  width: 100%;
+  height: 100%;
+  fill: currentColor;
+}
+
+.refresh-spinner {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #eff3f4;
+  border-top: 2px solid #1DA1F2;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.refresh-text {
+  font-size: 14px;
+  font-weight: 500;
 }
 
 /* 横屏优化 */

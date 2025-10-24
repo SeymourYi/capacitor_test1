@@ -213,6 +213,8 @@ onMounted(() => {
   min-height: 100vh;
   margin: 0 auto;
   background-color: #f7f7f7;
+  /* 确保底部有足够的安全区域空间 */
+  padding-bottom: var(--safe-area-inset-bottom, 0px);
 }
 
 /* 顶部导航栏（保持与postarticle一致） */
@@ -227,6 +229,10 @@ onMounted(() => {
   background: #ffffff;
   border-bottom: 1px solid #ececec;
   z-index: 1000;
+  /* 考虑安全区域，确保头部不被状态栏遮挡 */
+  padding-top: var(--safe-area-inset-top, 0px);
+  margin-top: calc(-1 * var(--safe-area-inset-top, 0px));
+  min-height: calc(46px + var(--safe-area-inset-top, 0px));
 }
 
 .nav-title { font-size: 17px; font-weight: 600; color: #111; }
@@ -256,6 +262,8 @@ onMounted(() => {
   border-bottom: 1px solid #ececec;
   padding: 16px;
   margin-bottom: 1px;
+  /* 参考评论界面的修复策略，为原文内容区域提供顶部间距 */
+  margin-top: calc(var(--safe-area-inset-top, 0px));
 }
 
 .post-header {

@@ -97,9 +97,11 @@
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
+import { computed, ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/store/user.js'
+import { StatusBar, Style } from '@capacitor/status-bar'
+import { SafeArea } from 'capacitor-plugin-safe-area'
 
 const route = useRoute()
 const router = useRouter()
@@ -119,15 +121,21 @@ const currentTitle = computed(() => {
 })
 
 const goHome = () => {
-  if (!isHome.value) router.push({ name: 'HomeFeed' })
+  if (!isHome.value) {
+    router.push({ name: 'HomeFeed' })
+  }
 }
 
 const goMe = () => {
-  if (!isMe.value) router.push({ name: 'Me' })
+  if (!isMe.value) {
+    router.push({ name: 'Me' })
+  }
 }
 
 const goNotice = () => {
-  if (!isNotice.value) router.push({ name: 'Notifications' })
+  if (!isNotice.value) {
+    router.push({ name: 'Notifications' })
+  }
 }
 
 // 标记所有通知为已读
@@ -200,6 +208,26 @@ const handleScan = () => {
   console.log('扫一扫')
   closeAddMenu()
 }
+
+// 初始化状态栏和安全区域
+onMounted(async () => {
+  try {
+    // 设置状态栏样式
+    await StatusBar.setStyle({ style: Style.Light })
+    await StatusBar.setBackgroundColor({ color: '#ffffff' })
+    
+    // 获取安全区域信息并设置CSS变量
+    const { insets } = await SafeArea.getSafeAreaInsets()
+    document.documentElement.style.setProperty('--safe-area-inset-top', `${insets.top}px`)
+    document.documentElement.style.setProperty('--safe-area-inset-bottom', `${insets.bottom}px`)
+    document.documentElement.style.setProperty('--safe-area-inset-left', `${insets.left}px`)
+    document.documentElement.style.setProperty('--safe-area-inset-right', `${insets.right}px`)
+    
+    console.log('安全区域信息:', insets)
+  } catch (error) {
+    console.error('初始化状态栏和安全区域失败:', error)
+  }
+})
 </script>
 
 <style scoped>
@@ -210,6 +238,11 @@ const handleScan = () => {
   flex-direction: column;
   min-height: 100vh;
   background: #ffffff;
+  /* 使用安全区域变量，确保内容不被状态栏和底部操作栏遮挡 */
+  padding-top: var(--safe-area-inset-top, 0px);
+  /* padding-bottom: var(--safe-area-inset-bottom, 0px); */
+  padding-left: var(--safe-area-inset-left, 0px);
+  padding-right: var(--safe-area-inset-right, 0px);
 }
 
 .topbar {
@@ -223,6 +256,10 @@ const handleScan = () => {
   background: #ffffff;
   border-bottom: 1px solid #eff3f4;
   z-index: 1000;
+  /* 延伸到状态栏区域 */
+  /* margin-top: calc(-1 * var(--safe-area-inset-top, 0px)); */
+  /* padding-top: calc(56px + var(--safe-area-inset-top, 0px)); */
+  /* min-height: calc(56px + var(--safe-area-inset-top, 0px)); */
 }
 
 .avatar {
@@ -429,6 +466,10 @@ const handleScan = () => {
   height: 56px;
   background: #ffffff;
   border-top: 1px solid #eff3f4;
+  /* 延伸到底部操作栏区域 */
+  /* margin-bottom: calc(-1 * var(--safe-area-inset-bottom, 0px)); */
+  /* padding-bottom: calc(56px + var(--safe-area-inset-bottom, 0px)); */
+  /* min-height: calc(56px + var(--safe-area-inset-bottom, 0px)); */
 }
 
 .tab {

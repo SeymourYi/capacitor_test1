@@ -1,13 +1,21 @@
 <template>
   <div id="app">
-    <keep-alive :include="cachedViews">
-      <router-view />
-    </keep-alive>
+    <router-view v-slot="{ Component }">
+      <keep-alive :include="cachedViews">
+        <component :is="Component" />
+      </keep-alive>
+    </router-view>
   </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
+import { useUserStore } from '@/store/user.js'
+import { createBackButtonHandler } from '@/utils/backButtonHandler.js'
+
+const router = useRouter()
+const userStore = useUserStore()
 
 // 需要缓存的组件列表
 const cachedViews = ref([
@@ -20,6 +28,32 @@ const cachedViews = ref([
   'SearchArticles',
   'SearchUsers'
 ])
+
+// 事件监听器清理函数
+let cleanupEventListeners = null
+// 返回按钮处理器
+let backButtonHandler = null
+
+onMounted(() => {
+  // 初始化事件监听器
+  cleanupEventListeners = userStore.initEventListeners()
+  
+  // 初始化返回按钮处理器
+  backButtonHandler = createBackButtonHandler(router)
+  backButtonHandler.startListening()
+})
+
+onUnmounted(() => {
+  // 清理事件监听器
+  if (cleanupEventListeners) {
+    cleanupEventListeners()
+  }
+  
+  // 清理返回按钮监听器
+  if (backButtonHandler) {
+    backButtonHandler.stopListening()
+  }
+})
 </script>
 
 <style>

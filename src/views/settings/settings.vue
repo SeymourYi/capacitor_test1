@@ -12,6 +12,7 @@
     <!-- 账号与安全 -->
     <div class="group">
       <div class="group-title">账号</div>
+      <!-- 账号信息选项已隐藏 -->
       <div class="cell">
         <div class="cell-left">
           <div class="cell-title">账号信息</div>
@@ -141,7 +142,12 @@ const doLogout = () => {
 <style scoped>
 * { box-sizing: border-box; }
 .settings { width: 100%; max-width: 600px; margin: 0 auto; background: #ffffff; min-height: 100vh; border-left: 1px solid #eff3f4; border-right: 1px solid #eff3f4; }
-.topbar { position: sticky; top: 0; height: 48px; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; background: rgba(255,255,255,0.92); backdrop-filter: blur(12px); border-bottom: 1px solid #eff3f4; z-index: 10; }
+.topbar {
+z-index: 9999 !important;
+  /* 考虑安全区域，确保头部不被状态栏遮挡 */
+  margin-top: calc(-1 * var(--safe-area-inset-top, 0px));
+   position: sticky;
+   top: 0; height: 48px; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; background: rgba(255,255,255,0.92); backdrop-filter: blur(12px); border-bottom: 1px solid #eff3f4; z-index: 10; }
 .back { background: transparent; border: none; color: #0f1419; }
 .icon { width: 22px; height: 22px; }
 .title { font-size: 18px; font-weight: 700; color: #0f1419; }

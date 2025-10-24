@@ -511,6 +511,8 @@ onMounted(() => {
   background-color: #ffffff;
   border-left: 1px solid #eff3f4;
   border-right: 1px solid #eff3f4;
+  /* 确保底部有足够的安全区域空间 */
+  padding-bottom: calc(20px + var(--safe-area-inset-bottom, 0px));
 }
 
 /* 头部 */
@@ -522,6 +524,9 @@ onMounted(() => {
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid #eff3f4;
   z-index: 1000;
+  /* 考虑安全区域，确保头部不被状态栏遮挡 */
+  padding-top: var(--safe-area-inset-top, 0px);
+  /* margin-top: calc(-1 * var(--safe-area-inset-top, 0px)); */
 }
 
 .header-content {

@@ -32,6 +32,37 @@ export const useUserStore = defineStore('user', {
     // 设置通知个数
     setNotificationsCount(count) {
       this.notificationsCount = count
+    },
+
+    // 初始化事件监听
+    initEventListeners() {
+      // 监听通知个数更新事件
+      const handleNotificationsCountUpdate = (event) => {
+        this.setNotificationsCount(event.detail.count)
+      }
+
+      // 监听单个通知已读事件
+      const handleNotificationRead = () => {
+        if (this.notificationsCount > 0) {
+          this.setNotificationsCount(this.notificationsCount - 1)
+        }
+      }
+
+      // 监听所有通知已读事件
+      const handleAllNotificationsRead = () => {
+        this.setNotificationsCount(0)
+      }
+
+      window.addEventListener('notifications-count-updated', handleNotificationsCountUpdate)
+      window.addEventListener('notification-read', handleNotificationRead)
+      window.addEventListener('all-notifications-read', handleAllNotificationsRead)
+
+      // 返回清理函数
+      return () => {
+        window.removeEventListener('notifications-count-updated', handleNotificationsCountUpdate)
+        window.removeEventListener('notification-read', handleNotificationRead)
+        window.removeEventListener('all-notifications-read', handleAllNotificationsRead)
+      }
     }
   }
 })

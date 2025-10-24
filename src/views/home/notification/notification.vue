@@ -1,7 +1,22 @@
 <template>
-  <div class="notice">
+  <div class="notice" @touchstart="handleTouchStart" @touchmove="handleTouchMove" @touchend="handleTouchEnd">
+    <!-- 下拉刷新指示器 -->
+    <div v-if="isPulling" class="pull-refresh-indicator" :style="{ transform: `translateY(${pullDistance}px)` }">
+      <div class="refresh-content">
+        <div v-if="!isRefreshing" class="refresh-icon" :style="{ transform: `rotate(${pullDistance * 2}deg)` }">
+          <svg viewBox="0 0 24 24" class="refresh-svg">
+            <path d="M17.65 6.35C16.2 4.9 14.21 4 12 4c-4.42 0-7.99 3.58-7.99 8s3.57 8 7.99 8c3.73 0 6.84-2.55 7.73-6h-2.08c-.82 2.33-3.04 4-5.65 4-3.31 0-6-2.69-6-6s2.69-6 6-6c1.66 0 3.14.69 4.22 1.78L13 11h7V4l-2.35 2.35z" fill="currentColor"/>
+          </svg>
+        </div>
+        <div v-else class="refresh-spinner">
+          <div class="spinner"></div>
+        </div>
+        <span class="refresh-text">{{ isRefreshing ? '正在刷新...' : pullDistance > 60 ? '释放刷新' : '下拉刷新' }}</span>
+      </div>
+    </div>
+
     <!-- 加载状态 - 骨架屏 -->
-    <div v-if="loading" class="loading">
+    <div v-if="loading && !isRefreshing" class="loading">
       <SkeletonLoader type="notification" :count="6" />
     </div>
 
@@ -12,7 +27,7 @@
     </div>
 
     <!-- 通知列表 -->
-    <div v-else-if="notifications.length > 0" class="notifications">
+    <div v-else-if="notifications && notifications.length > 0" class="notifications">
       <div 
         v-for="notice in notifications" 
         :key="notice.id" 
@@ -59,16 +74,26 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onActivated, onDeactivated, onUnmounted } from 'vue'
-import { getnoticeApi, readsomeonenotificationApi, readallnotificationApi } from '@/api/notice.js'
-import { getNotificationsNumberApi } from '@/api/user.js'
+import { ref, computed, onMounted, onActivated, onDeactivated, onUnmounted } from 'vue'
 import { useUserStore } from '@/store/user.js'
+import { useNotificationStore } from '@/store/notification.js'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
 
 const userStore = useUserStore()
-const notifications = ref([])
-const loading = ref(false)
-const error = ref('')
+const notificationStore = useNotificationStore()
+
+// 使用 store 中的数据
+const notifications = computed(() => notificationStore.notifications)
+const loading = computed(() => notificationStore.loading)
+const error = computed(() => notificationStore.error)
+
+// 下拉刷新相关
+const isPulling = ref(false)
+const isRefreshing = ref(false)
+const pullDistance = ref(0)
+const startY = ref(0)
+const currentY = ref(0)
+const maxPullDistance = 80
 
 const getActionText = (type) => {
   const actions = {
@@ -84,96 +109,33 @@ const handleImageError = (e) => {
   e.target.style.display = 'none'
 }
 
-// 标记通知为已读
+// 标记通知为已读 - 使用 store 方法
 const markAsRead = async (notice) => {
   if (!userStore.userInfo || !userStore.userInfo.username) {
     console.error('用户未登录')
     return
   }
 
-  try {
-    const res = await readsomeonenotificationApi(userStore.userInfo.username, notice.id)
-    if (res && res.code === 0) {
-      // 更新本地状态
-      const noticeIndex = notifications.value.findIndex(n => n.id === notice.id)
-      if (noticeIndex !== -1) {
-        notifications.value[noticeIndex].isRead = true
-      }
-      
-      // 更新通知个数
-      const currentCount = userStore.notificationsCount
-      if (currentCount > 0) {
-        userStore.setNotificationsCount(currentCount - 1)
-      }
-      
-      console.log('通知已标记为已读')
-    } else {
-      console.error('标记已读失败:', res?.msg || '未知错误')
-    }
-  } catch (error) {
-    console.error('标记已读请求失败:', error)
-  }
+  await notificationStore.markAsRead(userStore.userInfo.username, notice.id)
 }
 
-// 标记所有通知为已读
+// 标记所有通知为已读 - 使用 store 方法
 const markAllAsRead = async () => {
   if (!userStore.userInfo || !userStore.userInfo.username) {
     console.error('用户未登录')
     return
   }
 
-  try {
-    const res = await readallnotificationApi(userStore.userInfo.username)
-    if (res && res.code === 0) {
-      // 更新所有通知状态为已读
-      notifications.value.forEach(notice => {
-        notice.isRead = true
-      })
-      
-      // 清空通知个数
-      userStore.setNotificationsCount(0)
-      
-      console.log('所有通知已标记为已读')
-    } else {
-      console.error('全部已读失败:', res?.msg || '未知错误')
-    }
-  } catch (error) {
-    console.error('全部已读请求失败:', error)
-  }
+  await notificationStore.markAllAsRead(userStore.userInfo.username)
 }
 
-const fetchNotifications = async () => {
+// 获取通知列表 - 使用 store 方法
+const fetchNotifications = async (forceRefresh = false) => {
   if (!userStore.userInfo || !userStore.userInfo.username) {
-    error.value = '请先登录'
-    return
+    return []
   }
-
-  loading.value = true
-  error.value = ''
   
-  try {
-    const res = await getnoticeApi(userStore.userInfo.username)
-    if (res && res.code === 0) {
-      notifications.value = Array.isArray(res.data) ? res.data : []
-      
-      // 同时更新通知个数
-      try {
-        const countRes = await getNotificationsNumberApi(userStore.userInfo.username)
-        if (countRes && countRes.code === 0) {
-          userStore.setNotificationsCount(parseInt(countRes.data) || 0)
-        }
-      } catch (e) {
-        console.error('获取通知个数失败:', e)
-      }
-    } else {
-      error.value = (res && res.msg) || '获取通知失败'
-    }
-  } catch (e) {
-    console.error('获取通知失败:', e)
-    error.value = '网络错误，请稍后重试'
-  } finally {
-    loading.value = false
-  }
+  return await notificationStore.fetchNotifications(userStore.userInfo.username, forceRefresh)
 }
 
 // 定义组件名称
@@ -181,21 +143,26 @@ defineOptions({
   name: 'Notifications'
 })
 
-// 数据是否已加载过
-const hasLoaded = ref(false)
-
 onMounted(() => {
-  if (!hasLoaded.value) {
+  console.log('Notifications onMounted - hasLoaded:', notificationStore.hasLoaded, 'notifications count:', notifications.value?.length || 0)
+  // 如果 store 中没有数据或需要刷新，则获取数据
+  if (!notificationStore.hasLoaded || notificationStore.shouldRefresh()) {
+    console.log('Notifications: 首次加载或需要刷新')
     fetchNotifications()
-    hasLoaded.value = true
+  } else {
+    console.log('Notifications: 使用缓存数据，通知数量:', notifications.value?.length || 0)
   }
 })
 
 // 组件被激活时（从缓存中恢复）
 onActivated(() => {
-  if (notifications.value.length === 0 || !hasLoaded.value) {
+  console.log('Notifications onActivated - hasLoaded:', notificationStore.hasLoaded, 'notifications count:', notifications.value?.length || 0)
+  // 如果 store 中没有数据或需要刷新，则获取数据
+  if (!notificationStore.hasLoaded || notificationStore.shouldRefresh()) {
+    console.log('Notifications: 重新获取数据')
     fetchNotifications()
-    hasLoaded.value = true
+  } else {
+    console.log('Notifications: 使用缓存数据，通知数量:', notifications.value?.length || 0)
   }
 })
 
@@ -206,7 +173,7 @@ onDeactivated(() => {
 
 // 监听全部已读事件
 const handleNotificationsRefresh = () => {
-  fetchNotifications()
+  fetchNotifications(true) // 强制刷新
 }
 
 onMounted(() => {
@@ -216,6 +183,47 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener('notifications-refresh', handleNotificationsRefresh)
 })
+
+// 下拉刷新处理函数
+const handleTouchStart = (e) => {
+  if (window.scrollY === 0) {
+    startY.value = e.touches[0].clientY
+    isPulling.value = true
+  }
+}
+
+const handleTouchMove = (e) => {
+  if (!isPulling.value || isRefreshing.value) return
+  
+  currentY.value = e.touches[0].clientY
+  const deltaY = currentY.value - startY.value
+  
+  if (deltaY > 0) {
+    e.preventDefault()
+    pullDistance.value = Math.min(deltaY * 0.5, maxPullDistance)
+  }
+}
+
+const handleTouchEnd = async () => {
+  if (!isPulling.value || isRefreshing.value) return
+  
+  if (pullDistance.value > 60) {
+    isRefreshing.value = true
+    pullDistance.value = 60
+    
+    try {
+      // 强制刷新数据
+      await fetchNotifications(true)
+    } finally {
+      isRefreshing.value = false
+      pullDistance.value = 0
+      isPulling.value = false
+    }
+  } else {
+    pullDistance.value = 0
+    isPulling.value = false
+  }
+}
 </script>
 
 <style scoped>
@@ -374,5 +382,67 @@ onUnmounted(() => {
     opacity: 0;
     transform: scale(1.3);
   }
+}
+
+/* 下拉刷新样式 */
+.pull-refresh-indicator {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 60px;
+  background: #ffffff;
+  border-bottom: 1px solid #eff3f4;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.3s ease;
+}
+
+.refresh-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #536471;
+}
+
+.refresh-icon {
+  width: 20px;
+  height: 20px;
+  transition: transform 0.3s ease;
+}
+
+.refresh-svg {
+  width: 100%;
+  height: 100%;
+  fill: currentColor;
+}
+
+.refresh-spinner {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.spinner {
+  width: 16px;
+  height: 16px;
+  border: 2px solid #eff3f4;
+  border-top: 2px solid #1DA1F2;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.refresh-text {
+  font-size: 14px;
+  font-weight: 500;
 }
 </style>

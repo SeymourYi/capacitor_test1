@@ -180,6 +180,18 @@ const onPublish = async () => {
   }
 
   publishing.value = true
+  console.log(selectedImages.value)
+  console.log(content.value.trim())
+  console.log(userStore.userInfo.username)
+  console.log(userStore.userInfo.id)
+  console.log(1)
+  console.log(2)
+  console.log(3)
+  console.log(4)
+  console.log(5)
+  console.log(6)
+  console.log(7)
+  console.log(8)
 
   try {
     const res = await publishArticleApi(
@@ -217,6 +229,8 @@ const onPublish = async () => {
   min-height: 100vh;
   margin: 0 auto;
   background-color: #f7f7f7;
+  /* 确保底部有足够的安全区域空间 */
+  padding-bottom: var(--safe-area-inset-bottom, 0px);
 }
 
 .nav {
@@ -230,6 +244,10 @@ const onPublish = async () => {
   background: #ffffff;
   border-bottom: 1px solid #ececec;
   z-index: 1000;
+  /* 考虑安全区域，确保头部不被状态栏遮挡 */
+  padding-top: var(--safe-area-inset-top, 0px);
+  margin-top: calc(-1 * var(--safe-area-inset-top, 0px));
+  min-height: calc(46px + var(--safe-area-inset-top, 0px));
 }
 
 .nav-title { font-size: 17px; font-weight: 600; color: #111; }
@@ -316,7 +334,12 @@ const onPublish = async () => {
   white-space: nowrap;
 }
 
-.editor { background: #ffffff; padding: 12px; }
+.editor { 
+  background: #ffffff; 
+  padding: 12px; 
+  /* 参考评论和引用发布界面的修复策略，为内容编辑区域提供顶部间距 */
+  margin-top: calc(var(--safe-area-inset-top, 0px));
+}
 .author { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
 .avatar { 
   width: 36px; 
