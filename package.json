@@ -9,12 +9,14 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "@capacitor-community/sqlite": "^7.0.2",
     "@capacitor/android": "^7.4.3",
     "@capacitor/app": "^7.1.0",
     "@capacitor/camera": "^7.0.2",
     "@capacitor/core": "^7.4.3",
     "@capacitor/filesystem": "^7.1.4",
     "@capacitor/status-bar": "^7.0.3",
+    "@capacitor/toast": "^7.0.2",
     "@vueuse/core": "^14.0.0",
     "axios": "^1.12.2",
     "capacitor-plugin-safe-area": "^4.0.2",
@@ -25,7 +27,6 @@
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^6.0.1",
-    "vconsole": "^3.15.1",
     "vite": "^7.1.7"
   }
 }

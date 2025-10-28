@@ -66,7 +66,20 @@
             {{ article.content }}
           </div>
           
-          <!-- 转发内容 -->
+          <!-- 自身图片列表（在内容下面） -->
+          <div v-if="hasImages(article)" class="tweet-images">
+            <div 
+              v-for="(img, index) in getImageList(article)" 
+              :key="index"
+              class="tweet-image"
+              :class="{ 'single-image': getImageList(article).length === 1 }"
+              @click.stop="openImagePreview(article, index)"
+            >
+              <img :src="img" alt="文章图片" @error="handleImageError" />
+            </div>
+          </div>
+          
+          <!-- 转发内容（在最下面） -->
           <div v-if="article.userShare && article.beShareContent" class="retweet-container">
             <div class="retweet-header">
               <svg viewBox="0 0 24 24" class="retweet-icon">
@@ -86,7 +99,7 @@
                 <div v-else class="retweet-avatar-placeholder"></div>
                 <div class="retweet-author-info">
                   <span class="retweet-author-name">{{ article.beShareNickName }}</span>
-                  <span class="retweet-author-username">@{{ article.beShareCreaterUserName }}</span>
+                  <span class="retweet-author-username">@{{ truncateId(article.beShareCreaterUserName) }}</span>
                   <span class="retweet-time">· {{ article.beShareUptonowTime }}</span>
                 </div>
               </div>
@@ -94,19 +107,19 @@
               <div v-if="article.beShareCategoryName" class="retweet-category">
                 #{{ article.beShareCategoryName }}
               </div>
-            </div>
-          </div>
-          
-          <!-- 图片列表 -->
-          <div v-if="hasImages(article)" class="tweet-images">
-            <div 
-              v-for="(img, index) in getImageList(article)" 
-              :key="index"
-              class="tweet-image"
-              :class="{ 'single-image': getImageList(article).length === 1 }"
-              @click.stop="openImagePreview(article, index)"
-            >
-              <img :src="img" alt="文章图片" @error="handleImageError" />
+              
+              <!-- 被引用文章的图片 -->
+              <div v-if="hasRetweetImages(article)" class="retweet-images">
+                <div 
+                  v-for="(img, index) in getRetweetImageList(article)" 
+                  :key="index"
+                  class="retweet-image"
+                  :class="{ 'single-image': getRetweetImageList(article).length === 1 }"
+                  @click.stop="openRetweetImagePreview(article, index)"
+                >
+                  <img :src="img" alt="被引用文章图片" @error="handleImageError" />
+                </div>
+              </div>
             </div>
           </div>
           
@@ -234,6 +247,38 @@ const getImageList = (article) => {
   return article.coverImgList.filter(img => img && img.trim() !== '')
 }
 
+// 限制ID显示长度
+const truncateId = (id, maxLength = 8) => {
+  if (!id) return ''
+  const idStr = String(id)
+  return idStr.length > maxLength ? idStr.substring(0, maxLength) + '...' : idStr
+}
+
+// 获取被引用文章的图片列表
+const getRetweetImageList = (article) => {
+  const images = []
+  
+  // 如果有beShareCoverImg单张图片
+  if (article.beShareCoverImg && article.beShareCoverImg.trim() !== '') {
+    images.push(article.beShareCoverImg)
+  }
+  
+  // 如果有beShareCoverImgList多图（备用）
+  if (article.beShareCoverImgList && Array.isArray(article.beShareCoverImgList)) {
+    const validImages = article.beShareCoverImgList.filter(img => img && img.trim() !== '')
+    images.push(...validImages)
+  }
+  
+  return images
+}
+
+// 判断被引用文章是否有图片
+const hasRetweetImages = (article) => {
+  return (article.beShareCoverImg && article.beShareCoverImg.trim() !== '') ||
+         (article.beShareCoverImgList && Array.isArray(article.beShareCoverImgList) && 
+          article.beShareCoverImgList.some(img => img && img.trim() !== ''))
+}
+
 // 图片加载失败处理
 const handleImageError = (e) => {
   e.target.style.display = 'none'
@@ -333,6 +378,13 @@ const goToRetweetedArticle = (article) => {
 // 打开图片预览
 const openImagePreview = (article, index) => {
   previewImages.value = getImageList(article)
+  previewIndex.value = index
+  previewVisible.value = true
+}
+
+// 打开被引用文章图片预览
+const openRetweetImagePreview = (article, index) => {
+  previewImages.value = getRetweetImageList(article)
   previewIndex.value = index
   previewVisible.value = true
 }
@@ -626,8 +678,8 @@ onDeactivated(() => {
 
 .tweet-item {
   display: flex;
-  padding: 12px 16px;
-  gap: 12px;
+  padding: 16px 20px;
+  gap: 16px;
   border-bottom: 1px solid #eff3f4;
   cursor: pointer;
   transition: background-color 0.2s;
@@ -647,22 +699,38 @@ onDeactivated(() => {
 .tweet-header {
   display: flex;
   align-items: baseline;
-  gap: 4px;
-  margin-bottom: 4px;
-  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 6px;
+  flex-wrap: nowrap;
   position: relative;
+  min-width: 0;
 }
 
 .tweet-name {
   font-weight: 700;
-  font-size: 15px;
+  font-size: 17px;
   color: #0f1419;
+  flex-shrink: 0;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.tweet-username,
-.tweet-time {
-  font-size: 15px;
+.tweet-username {
+  font-size: 14px;
   color: #536471;
+  flex-shrink: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tweet-time {
+  font-size: 14px;
+  color: #536471;
+  flex-shrink: 0;
 }
 
 .category-tag {
@@ -773,9 +841,99 @@ onDeactivated(() => {
   font-weight: 500;
 }
 
+/* 被引用文章图片样式 */
+.retweet-images {
+  display: grid;
+  gap: 4px;
+  margin-top: 8px;
+  border-radius: 8px;
+  overflow: hidden;
+  max-width: 250px;
+}
+
+/* 单张图片 */
+.retweet-images:has(.retweet-image:nth-child(1):last-child) {
+  grid-template-columns: 1fr;
+  max-width: 200px;
+}
+
+.retweet-images:has(.retweet-image:nth-child(1):last-child) .retweet-image {
+  max-height: 200px;
+  aspect-ratio: auto;
+}
+
+/* 两张图片 */
+.retweet-images:has(.retweet-image:nth-child(2):last-child) {
+  grid-template-columns: 1fr 1fr;
+  max-width: 200px;
+}
+
+.retweet-images:has(.retweet-image:nth-child(2):last-child) .retweet-image {
+  aspect-ratio: 1;
+}
+
+/* 三张图片 - 微信朋友圈样式 */
+.retweet-images:has(.retweet-image:nth-child(3):last-child) {
+  grid-template-columns: 2fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  max-width: 200px;
+}
+
+.retweet-images:has(.retweet-image:nth-child(3):last-child) .retweet-image:nth-child(1) {
+  grid-row: 1 / 3;
+  aspect-ratio: 1;
+}
+
+.retweet-images:has(.retweet-image:nth-child(3):last-child) .retweet-image:nth-child(2),
+.retweet-images:has(.retweet-image:nth-child(3):last-child) .retweet-image:nth-child(3) {
+  aspect-ratio: 1;
+}
+
+/* 四张图片 - 2x2网格 */
+.retweet-images:has(.retweet-image:nth-child(4):last-child) {
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  max-width: 200px;
+}
+
+.retweet-images:has(.retweet-image:nth-child(4):last-child) .retweet-image {
+  aspect-ratio: 1;
+}
+
+/* 五张及以上图片 - 3列网格 */
+.retweet-images:has(.retweet-image:nth-child(5)) {
+  grid-template-columns: repeat(3, 1fr);
+  max-width: 200px;
+}
+
+.retweet-images:has(.retweet-image:nth-child(5)) .retweet-image {
+  aspect-ratio: 1;
+}
+
+.retweet-image {
+  position: relative;
+  cursor: pointer;
+  overflow: hidden;
+  background: #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.retweet-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.2s ease;
+}
+
+.retweet-image:hover img {
+  transform: scale(1.05);
+}
+
 .tweet-text {
-  font-size: 15px;
-  line-height: 1.5;
+  font-size: 16px;
+  line-height: 1.4;
   color: #0f1419;
   margin-bottom: 12px;
   white-space: pre-wrap;
@@ -1024,20 +1182,27 @@ onDeactivated(() => {
   
   .compose-tweet,
   .tweet-item {
-    padding: 12px;
+    padding: 14px 16px;
+    gap: 14px;
   }
   
   .avatar-img,
   .avatar-placeholder {
-    width: 40px;
-    height: 40px;
+    width: 44px;
+    height: 44px;
   }
   
-  .tweet-name,
+  .tweet-name {
+    font-size: 16px;
+  }
+  
   .tweet-username,
-  .tweet-time,
+  .tweet-time {
+    font-size: 13px;
+  }
+  
   .tweet-text {
-    font-size: 14px;
+    font-size: 15px;
   }
   
   .action-item {
@@ -1064,6 +1229,7 @@ onDeactivated(() => {
 .tweet-menu {
   margin-left: auto;
   padding: 4px;
+  flex-shrink: 0;
   border-radius: 50%;
   cursor: pointer;
   transition: background-color 0.2s;

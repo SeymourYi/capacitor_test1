@@ -1,7 +1,7 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
 import { getHomeArticleList, likeArticleApi, deleteArticleApi } from '@/api/article.js'
-
+import { useUserStore } from '@/store/user.js'
 export const useArticleStore = defineStore('article', () => {
   // 状态
   const articles = ref([])
@@ -9,7 +9,7 @@ export const useArticleStore = defineStore('article', () => {
   const error = ref(null)
   const lastFetchTime = ref(null)
   const hasLoaded = ref(false)
-
+  const userStore = useUserStore()
   // 缓存时间（5分钟）
   const CACHE_DURATION = 5 * 60 * 1000
 
@@ -28,9 +28,11 @@ export const useArticleStore = defineStore('article', () => {
     error.value = null
     
     try {
-      const response = await getHomeArticleList(1) // 使用userid=1
-      console.log('ArticleStore: API返回数据:', response)
+      // 检查用户是否已登录，如果未登录则使用默认值
+      const userId = userStore.userInfo?.id || 2
+      console.log('ArticleStore: 获取文章列表，用户ID:', userId)
       
+      const response = await getHomeArticleList(userId) 
       if (response.code === 0) {
         articles.value = response.data || []
         lastFetchTime.value = Date.now()
@@ -38,7 +40,7 @@ export const useArticleStore = defineStore('article', () => {
         console.log('ArticleStore: 数据已更新，文章数量:', articles.value.length)
       } else {
         error.value = response.msg || '获取数据失败'
-      }
+      } 
     } catch (err) {
       console.error('ArticleStore: 获取文章列表失败:', err)
       error.value = '网络错误，请稍后重试'
@@ -51,6 +53,12 @@ export const useArticleStore = defineStore('article', () => {
 
   // 点赞文章
   const likeArticle = async (username, articleId) => {
+    // 检查用户是否已登录
+    if (!userStore.userInfo || !userStore.userInfo.username) {
+      console.error('ArticleStore: 用户未登录，无法点赞')
+      return false
+    }
+
     try {
       const res = await likeArticleApi(username, articleId)
       if (res && res.code === 0) {
@@ -77,6 +85,12 @@ export const useArticleStore = defineStore('article', () => {
 
   // 删除文章
   const deleteArticle = async (articleId) => {
+    // 检查用户是否已登录
+    if (!userStore.userInfo || !userStore.userInfo.username) {
+      console.error('ArticleStore: 用户未登录，无法删除文章')
+      return false
+    }
+
     try {
       const res = await deleteArticleApi(articleId)
       if (res && res.code === 0) {

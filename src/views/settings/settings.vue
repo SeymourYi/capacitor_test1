@@ -12,30 +12,30 @@
     <!-- 账号与安全 -->
     <div class="group">
       <div class="group-title">账号</div>
-      <!-- 账号信息选项已隐藏 -->
-      <div class="cell">
+      <!-- 账号信息选项 -->
+      <div class="cell" @click="goToAccountInfo">
         <div class="cell-left">
           <div class="cell-title">账号信息</div>
-          <div class="cell-sub">用户名、邮箱、手机号码</div>
+          <div class="cell-sub">编辑昵称、位置、生日、头像</div>
         </div>
         <div class="cell-right">›</div>
       </div>
-      <div class="cell">
+      <div class="cell" @click="goToChangePassword">
         <div class="cell-left">
           <div class="cell-title">密码与安全</div>
-          <div class="cell-sub">两步验证、登录历史</div>
+          <div class="cell-sub">修改密码等账号相关设置</div>
         </div>
         <div class="cell-right">›</div>
       </div>
     </div>
 
     <!-- 隐私和安全 -->
-    <div class="group">
+    <!-- <div class="group">
       <div class="group-title">隐私与安全</div>
       <div class="cell">
         <div class="cell-left">
           <div class="cell-title">私密账号</div>
-          <div class="cell-sub">仅关注者可看到你的内容</div>
+          <div class="cell-sub">设置谁能看到你的帖子</div>
         </div>
         <label class="switch">
           <input type="checkbox" v-model="isPrivate" />
@@ -45,17 +45,17 @@
       <div class="cell">
         <div class="cell-left">
           <div class="cell-title">消息权限</div>
-          <div class="cell-sub">允许任何人给你发消息</div>
+          <div class="cell-sub">设置谁能给你发消息</div>
         </div>
         <label class="switch">
           <input type="checkbox" v-model="dmOpen" />
           <span class="slider"></span>
         </label>
       </div>
-    </div>
+    </div> -->
 
     <!-- 外观 -->
-    <div class="group">
+    <!-- <div class="group">
       <div class="group-title">显示与声音</div>
       <div class="cell">
         <div class="cell-left">
@@ -81,22 +81,22 @@
         </div>
         <div class="cell-right">›</div>
       </div>
-    </div>
+    </div> -->
 
     <!-- 其他 -->
     <div class="group">
       <div class="group-title">其他</div>
-      <div class="cell">
+      <!-- <div class="cell">
         <div class="cell-left">
           <div class="cell-title">清理缓存</div>
           <div class="cell-sub">已占用 {{ cacheSize }}</div>
         </div>
         <button class="btn">清理</button>
-      </div>
+      </div> -->
       <div class="cell">
         <div class="cell-left">
           <div class="cell-title">关于</div>
-          <div class="cell-sub">版本 1.0.0 (UI 占位)</div>
+          <div class="cell-sub">版本 1.0.0</div>
         </div>
         <div class="cell-right">›</div>
       </div>
@@ -136,6 +136,14 @@ const confirmLogout = ref(false)
 const doLogout = () => {
   confirmLogout.value = false
   router.replace({ name: 'Login' })
+}
+
+const goToAccountInfo = () => {
+  router.push({ name: 'AccountInfo' })
+}
+
+const goToChangePassword = () => {
+  router.push({ name: 'ChangePassword' })
 }
 </script>
 

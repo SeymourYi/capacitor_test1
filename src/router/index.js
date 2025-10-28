@@ -28,6 +28,12 @@ const routes = [
         meta: { keepAlive: true }
       },
       {
+        path: 'message',
+        name: 'Message',
+        component: () => import('../views/home/message/message.vue'),
+        meta: { keepAlive: true }
+      },
+      {
         path: 'me',
         name: 'Me',
         component: () => import('../views/home/me/me.vue'),
@@ -96,6 +102,26 @@ const routes = [
     name: 'SearchUsers',
     component: () => import('../views/search/searchuser.vue'),
     meta: { keepAlive: true }
+  },
+  {
+    path: '/sqlite-test',
+    name: 'SQLiteTest',
+    component: () => import('../views/sqlite-test.vue')
+  },
+  {
+    path: '/chat/:userId/:username',
+    name: 'ChatDetail',
+    component: () => import('../views/home/message/chatDetail.vue')
+  },
+  {
+    path: '/account-info',
+    name: 'AccountInfo',
+    component: () => import('../views/settings/accountInfo.vue')
+  },
+  {
+    path: '/change-password',
+    name: 'ChangePassword',
+    component: () => import('../views/settings/changePassword.vue')
   }
 ]
 

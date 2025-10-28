@@ -44,30 +44,80 @@
           </div>
         </div>
 
-        <!-- 操作菜单 -->
-        <div v-if="showActionMenu" class="action-menu" @click.stop>
-          <div class="action-item" @click="handleSaveImage">
-            <svg viewBox="0 0 24 24" class="action-icon">
-              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            <span>保存图片</span>
+        <!-- 微信风格底部操作框 -->
+        <transition name="action-slide">
+          <div v-if="showActionSheet" class="action-sheet" @click.stop>
+            <!-- 转发给朋友区域 -->
+            <!-- <div class="forward-section">
+              <div class="forward-label">转发给</div>
+              <div class="forward-contacts">
+                <div class="contact-item">
+                  <div class="contact-avatar">
+                    <img src="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPGNpcmNsZSBjeD0iMjAiIGN5PSIyMCIgcj0iMjAiIGZpbGw9IiMxREExRjIiLz4KPHN2ZyB4PSI4IiB5PSI4IiB3aWR0aD0iMjQiIGhlaWdodD0iMjQiIHZpZXdCb3g9IjAgMCAyNCAyNCIgZmlsbD0ibm9uZSI+CjxwYXRoIGQ9Ik0xMiAxMkMxNCAyMDkgMTIgMjAgMTIgMjBDMTIgMjAgMTAgMjA5IDEyIDEyWiIgZmlsbD0id2hpdGUiLz4KPC9zdmc+Cjwvc3ZnPgo=" alt="用户头像" />
+                  </div>
+                  <div class="contact-name">A*朵朵</div>
+                </div>
+                <div class="contact-placeholder">
+                  <div class="placeholder-icon">+</div>
+                </div>
+              </div>
+            </div> -->
+
+            <!-- 操作按钮网格 -->
+            <div class="action-grid">
+              <!-- <div class="action-row">
+                <div class="action-btn" @click="handleSendToFriend">
+                  <div class="action-btn-icon send-icon">📤</div>
+                  <div class="action-btn-text">发送给朋友</div>
+                </div>
+                <div class="action-btn" @click="handleCollect">
+                  <div class="action-btn-icon collect-icon">📦</div>
+                  <div class="action-btn-text">收藏</div>
+                </div>
+                <div class="action-btn" @click="handleSearch">
+                  <div class="action-btn-icon search-icon">🔍</div>
+                  <div class="action-btn-text">搜一搜</div>
+                </div>
+                <div class="action-btn" @click="handleOpenWithOther">
+                  <div class="action-btn-icon other-icon">⋯</div>
+                  <div class="action-btn-text">用其他应用打开</div>
+                </div>
+              </div> -->
+              <div class="action-row">
+                <div class="action-btn" @click="handleSaveImage">
+                  <div class="action-btn-icon save-icon">💾</div>
+                  <div class="action-btn-text">保存图片</div>
+                </div>
+                <!-- <div class="action-btn" @click="handleEdit">
+                  <div class="action-btn-icon edit-icon">✏️</div>
+                  <div class="action-btn-text">编辑</div>
+                </div>
+                <div class="action-btn" @click="handleLocateInChat">
+                  <div class="action-btn-icon locate-icon">💬</div>
+                  <div class="action-btn-text">定位到聊天位置</div>
+                </div>
+                <div class="action-btn" @click="handleShowMedia">
+                  <div class="action-btn-icon media-icon">🖼️</div>
+                  <div class="action-btn-text">此聊天中的图片视频</div>
+                </div>
+                <div class="action-btn" @click="handleTranslate">
+                  <div class="action-btn-icon translate-icon">🌐</div>
+                  <div class="action-btn-text">翻译</div>
+                </div>
+                <div class="action-btn" @click="handleExtractText">
+                  <div class="action-btn-icon extract-icon">📝</div>
+                  <div class="action-btn-text">提取文字</div>
+                </div> -->
+              </div>
+            </div>
+
+            <!-- 取消按钮 -->
+            <div class="cancel-btn" @click="hideActionSheet">取消</div>
           </div>
-          <div class="action-item" @click="handleShareImage">
-            <svg viewBox="0 0 24 24" class="action-icon">
-              <path d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 1 1 0-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 1 1 5.367-2.684 3 3 0 0 1-5.367 2.684zm0 9.316a3 3 0 1 1 5.367 2.684 3 3 0 0 1-5.367-2.684z" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-            </svg>
-            <span>分享</span>
-          </div>
-          <div class="action-item" @click="handleClose">
-            <svg viewBox="0 0 24 24" class="action-icon">
-              <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
-            </svg>
-            <span>关闭</span>
-          </div>
-        </div>
+        </transition>
 
         <!-- 底部指示器 -->
-        <div v-if="images.length > 1" class="indicator-dots">
+        <div v-if="images.length > 1 && !showActionSheet" class="indicator-dots">
           <div 
             v-for="(_, index) in images" 
             :key="index"
@@ -107,7 +157,7 @@ const touchStartX = ref(0)
 const touchStartY = ref(0)
 const touchStartTime = ref(0)
 const isTransitioning = ref(false)
-const showActionMenu = ref(false)
+const showActionSheet = ref(false)
 const longPressTimer = ref(null)
 const isLongPressing = ref(false)
 const scale = ref(1)
@@ -118,7 +168,7 @@ watch(() => props.visible, (newVal) => {
     currentIndex.value = props.initialIndex
     isZoomed.value = false
     scale.value = 1
-    showActionMenu.value = false
+    showActionSheet.value = false
     document.body.style.overflow = 'hidden'
   } else {
     document.body.style.overflow = ''
@@ -170,11 +220,15 @@ const handleDoubleClick = () => {
 }
 
 const handleContainerClick = () => {
-  if (showActionMenu.value) {
-    showActionMenu.value = false
+  if (showActionSheet.value) {
+    hideActionSheet()
   } else {
     handleClose()
   }
+}
+
+const hideActionSheet = () => {
+  showActionSheet.value = false
 }
 
 const handleImageTouchStart = (e) => {
@@ -188,7 +242,7 @@ const handleImageTouchStart = (e) => {
     longPressTimer.value = setTimeout(() => {
       if (!isLongPressing.value) {
         isLongPressing.value = true
-        showActionMenu.value = true
+        showActionSheet.value = true
       }
     }, 500) // 500ms长按
   } else if (e.touches.length === 2) {
@@ -242,7 +296,7 @@ const handleImageTouchEnd = (e) => {
 
 const handleContextMenu = (e) => {
   e.preventDefault()
-  showActionMenu.value = true
+  showActionSheet.value = true
 }
 
 const handleSaveImage = async () => {
@@ -260,7 +314,7 @@ const handleSaveImage = async () => {
     document.body.removeChild(link)
     window.URL.revokeObjectURL(url)
     
-    showActionMenu.value = false
+    hideActionSheet()
     alert('图片已保存到下载文件夹')
   } catch (error) {
     console.error('保存图片失败:', error)
@@ -283,11 +337,66 @@ const handleShareImage = async () => {
       await navigator.clipboard.writeText(currentImage)
       alert('图片链接已复制到剪贴板')
     }
-    showActionMenu.value = false
+    hideActionSheet()
   } catch (error) {
     console.error('分享图片失败:', error)
     alert('分享失败，请稍后重试')
   }
+}
+
+// 新增的操作函数
+const handleSendToFriend = () => {
+  console.log('发送给朋友')
+  hideActionSheet()
+  // TODO: 实现发送给朋友功能
+}
+
+const handleCollect = () => {
+  console.log('收藏')
+  hideActionSheet()
+  // TODO: 实现收藏功能
+}
+
+const handleSearch = () => {
+  console.log('搜一搜')
+  hideActionSheet()
+  // TODO: 实现搜一搜功能
+}
+
+const handleOpenWithOther = () => {
+  console.log('用其他应用打开')
+  hideActionSheet()
+  // TODO: 实现用其他应用打开功能
+}
+
+const handleEdit = () => {
+  console.log('编辑')
+  hideActionSheet()
+  // TODO: 实现编辑功能
+}
+
+const handleLocateInChat = () => {
+  console.log('定位到聊天位置')
+  hideActionSheet()
+  // TODO: 实现定位到聊天位置功能
+}
+
+const handleShowMedia = () => {
+  console.log('此聊天中的图片视频')
+  hideActionSheet()
+  // TODO: 实现显示聊天媒体功能
+}
+
+const handleTranslate = () => {
+  console.log('翻译')
+  hideActionSheet()
+  // TODO: 实现翻译功能
+}
+
+const handleExtractText = () => {
+  console.log('提取文字')
+  hideActionSheet()
+  // TODO: 实现提取文字功能
 }
 
 // 触摸事件处理
@@ -461,49 +570,166 @@ onUnmounted(() => {
   background: rgba(255, 255, 255, 0.7);
 }
 
-/* 操作菜单 */
-.action-menu {
+/* 微信风格操作框 */
+.action-sheet {
   position: absolute;
-  bottom: 60px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(0, 0, 0, 0.8);
-  border-radius: 12px;
-  padding: 8px;
-  display: flex;
-  gap: 20px;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #f7f7f7;
+  border-radius: 12px 12px 0 0;
   z-index: 20;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  max-height: 70vh;
+  overflow-y: auto;
 }
 
-.action-item {
+/* 转发给朋友区域 */
+.forward-section {
+  padding: 16px 20px 12px;
+  border-bottom: 1px solid #e5e5e5;
+}
+
+.forward-label {
+  font-size: 14px;
+  color: #999;
+  margin-bottom: 12px;
+}
+
+.forward-contacts {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.contact-item {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
-  padding: 12px 16px;
+  gap: 6px;
+}
+
+.contact-avatar {
+  width: 50px;
+  height: 50px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.contact-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.contact-name {
+  font-size: 12px;
+  color: #333;
+  text-align: center;
+}
+
+.contact-placeholder {
+  width: 50px;
+  height: 50px;
+  border: 2px dashed #ccc;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.contact-placeholder:hover {
+  border-color: #1DA1F2;
+}
+
+.placeholder-icon {
+  font-size: 20px;
+  color: #ccc;
+  font-weight: bold;
+}
+
+/* 操作按钮网格 */
+.action-grid {
+  padding: 16px 20px;
+}
+
+.action-row {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 20px;
+}
+
+.action-row:last-child {
+  margin-bottom: 0;
+}
+
+.action-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 8px;
   cursor: pointer;
   border-radius: 8px;
   transition: background-color 0.2s;
-  min-width: 60px;
+  min-width: 0;
 }
 
-.action-item:hover {
-  background: rgba(255, 255, 255, 0.1);
+.action-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
 }
 
-.action-icon {
-  width: 24px;
-  height: 24px;
-  color: white;
+.action-btn-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+  background: #fff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
 }
 
-.action-item span {
-  color: white;
+.action-btn-text {
   font-size: 12px;
-  font-weight: 500;
+  color: #333;
   text-align: center;
+  line-height: 1.2;
+  word-break: break-all;
+}
+
+/* 取消按钮 */
+.cancel-btn {
+  margin: 8px 20px 20px;
+  height: 50px;
+  background: #fff;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 16px;
+  color: #333;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  font-weight: 500;
+}
+
+.cancel-btn:hover {
+  background: #f0f0f0;
+}
+
+/* 操作框动画 */
+.action-slide-enter-active,
+.action-slide-leave-active {
+  transition: transform 0.3s ease;
+}
+
+.action-slide-enter-from,
+.action-slide-leave-to {
+  transform: translateY(100%);
 }
 
 /* 过渡动画 */
@@ -540,23 +766,51 @@ onUnmounted(() => {
     height: 6px;
   }
   
-  .action-menu {
-    bottom: 50px;
-    gap: 16px;
+  .action-sheet {
+    max-height: 60vh;
   }
   
-  .action-item {
-    padding: 10px 12px;
-    min-width: 50px;
+  .forward-section {
+    padding: 12px 16px 8px;
   }
   
-  .action-icon {
-    width: 20px;
-    height: 20px;
+  .contact-avatar {
+    width: 40px;
+    height: 40px;
   }
   
-  .action-item span {
+  .contact-placeholder {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .action-grid {
+    padding: 12px 16px;
+  }
+  
+  .action-row {
+    gap: 12px;
+    margin-bottom: 16px;
+  }
+  
+  .action-btn {
+    padding: 8px 4px;
+  }
+  
+  .action-btn-icon {
+    width: 36px;
+    height: 36px;
+    font-size: 18px;
+  }
+  
+  .action-btn-text {
     font-size: 11px;
+  }
+  
+  .cancel-btn {
+    margin: 6px 16px 16px;
+    height: 44px;
+    font-size: 15px;
   }
 }
 

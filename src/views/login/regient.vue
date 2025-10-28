@@ -38,7 +38,7 @@
               placeholder="验证码" 
               v-model="smsCode"
               :class="{ error: smsCodeError }"
-              maxlength="6"
+              maxlength="4"
             />
             <div class="input-icon">🔢</div>
             <button 
@@ -57,11 +57,13 @@
             <input 
               class="form-input" 
               placeholder="密码" 
-              type="password" 
               v-model="password"
               :class="{ error: passwordError }"
             />
             <div class="input-icon">🔒</div>
+          </div>
+          <div class="password-hint">
+            💡 密码只能为中文，你可以使用一句你喜欢的诗，比如 "多少楼台风雨中"
           </div>
           <div v-if="passwordError" class="error-text">{{ passwordError }}</div>
         </div>
@@ -71,7 +73,6 @@
             <input 
               class="form-input" 
               placeholder="确认密码" 
-              type="password" 
               v-model="confirmPassword"
               :class="{ error: confirmPasswordError }"
             />
@@ -116,6 +117,12 @@
         {{ error }}
       </div>
 
+      <!-- 成功提示 -->
+      <div v-if="successMessage" class="success-message">
+        <div class="success-icon">✅</div>
+        {{ successMessage }}
+      </div>
+
       <!-- 底部链接 -->
       <div class="footer-links">
         <span class="link-text">已有账户？</span>
@@ -128,13 +135,14 @@
 <script setup>
 import { ref, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
+import { registerApi, sendSmsCodeApi } from '@/api/user.js'
 
 const router = useRouter()
 
 // 表单数据
 const phone = ref('')
 const smsCode = ref('')
-const password = ref('')
+const password = ref('多少楼台烟雨中')
 const confirmPassword = ref('')
 const agreeTerms = ref(false)
 
@@ -149,6 +157,10 @@ const termsError = ref('')
 const smsCountdown = ref(0)
 const loading = ref(false)
 const error = ref('')
+const generatedCode = ref('') // 存储生成的验证码
+const isCodeSent = ref(false) // 是否已发送验证码
+const successMessage = ref('') // 成功提示信息
+const sentPhoneNumber = ref('') // 存储发送验证码时的手机号码
 
 // 表单验证
 const isValidPhone = computed(() => {
@@ -156,12 +168,32 @@ const isValidPhone = computed(() => {
   return phoneRegex.test(phone.value)
 })
 
+// 手机号码格式校验函数
+const validatePhoneFormat = (phoneNumber) => {
+  const phoneRegex = /^1[3-9]\d{9}$/
+  if (!phoneNumber) {
+    return '请输入手机号码'
+  }
+  if (!phoneRegex.test(phoneNumber)) {
+    return '请输入正确的手机号码格式'
+  }
+  return ''
+}
+
+// 检查手机号码是否被修改
+const isPhoneChanged = computed(() => {
+  return isCodeSent.value && sentPhoneNumber.value && sentPhoneNumber.value !== phone.value
+})
+
 const isFormValid = computed(() => {
   return isValidPhone.value && 
-         smsCode.value.trim().length === 6 &&
+         smsCode.value.trim().length === 4 &&
          password.value.trim() && 
          confirmPassword.value.trim() &&
          password.value === confirmPassword.value &&
+         isCodeSent.value &&
+         !isPhoneChanged.value &&
+         smsCode.value.trim() === generatedCode.value &&
          agreeTerms.value
 })
 
@@ -173,28 +205,87 @@ watch([phone, smsCode, password, confirmPassword, agreeTerms], () => {
   confirmPasswordError.value = ''
   termsError.value = ''
   error.value = ''
+  successMessage.value = ''
 })
+
+// 监听验证码输入，实时验证
+watch(smsCode, (newCode) => {
+  if (newCode.length === 4 && isCodeSent.value) {
+    if (newCode === generatedCode.value) {
+      smsCodeError.value = ''
+      console.log('验证码正确')
+    } else {
+      smsCodeError.value = '验证码错误'
+    }
+  } else if (newCode.length < 4) {
+    smsCodeError.value = ''
+  }
+})
+
+// 监听密码确认，实时验证密码一致性
+watch([password, confirmPassword], () => {
+  if (confirmPassword.value && password.value !== confirmPassword.value) {
+    confirmPasswordError.value = '两次输入的密码不一致'
+  } else {
+    confirmPasswordError.value = ''
+  }
+})
+
+// 监听手机号码变化，如果手机号码被修改则重置验证码状态
+watch(phone, (newPhone, oldPhone) => {
+  if (isCodeSent.value && oldPhone && newPhone !== oldPhone) {
+    // 手机号码被修改，重置验证码相关状态
+    smsCode.value = ''
+    generatedCode.value = ''
+    isCodeSent.value = false
+    sentPhoneNumber.value = ''
+    smsCountdown.value = 0
+    smsCodeError.value = '手机号码已修改，请重新获取验证码'
+  }
+})
+
+// 生成4位随机验证码
+const generateCode = () => {
+  return Math.floor(1000 + Math.random() * 9000).toString()
+}
 
 // 发送验证码
 const sendSmsCode = async () => {
-  if (!isValidPhone.value) {
-    phoneError.value = '请输入正确的手机号'
+  // 先进行手机号码格式校验
+  const phoneValidationError = validatePhoneFormat(phone.value)
+  if (phoneValidationError) {
+    phoneError.value = phoneValidationError
     return
   }
   
   try {
-    // 这里应该调用发送验证码的API
-    // const res = await sendSmsCodeApi(phone.value)
-    console.log('发送验证码到:', phone.value)
+    // 生成4位随机验证码
+    generatedCode.value = generateCode()
+    console.log('生成的验证码:', generatedCode.value)
     
-    // 模拟发送成功，开始倒计时
-    smsCountdown.value = 60
-    const timer = setInterval(() => {
-      smsCountdown.value--
-      if (smsCountdown.value <= 0) {
-        clearInterval(timer)
-      }
-    }, 1000)
+    // 调用发送验证码的API
+    const res = await sendSmsCodeApi(phone.value, generatedCode.value)
+    console.log('发送验证码API响应:', res)
+    
+    if (res.code === 0) {
+      // 发送成功，保存当前手机号码并开始倒计时
+      sentPhoneNumber.value = phone.value
+      isCodeSent.value = true
+      smsCountdown.value = 60
+      const timer = setInterval(() => {
+        smsCountdown.value--
+        if (smsCountdown.value <= 0) {
+          clearInterval(timer)
+        }
+      }, 1000)
+      
+      // 清除之前的错误信息
+      error.value = ''
+      smsCodeError.value = ''
+      phoneError.value = ''
+    } else {
+      error.value = res.msg || '发送验证码失败，请稍后重试'
+    }
   } catch (e) {
     console.error('发送验证码失败:', e)
     error.value = '发送验证码失败，请稍后重试'
@@ -204,24 +295,44 @@ const sendSmsCode = async () => {
 // 注册
 const onRegister = async () => {
   // 表单验证
-  if (!isValidPhone.value) {
-    phoneError.value = '请输入正确的手机号'
+  const phoneValidationError = validatePhoneFormat(phone.value)
+  if (phoneValidationError) {
+    phoneError.value = phoneValidationError
     return
   }
+  
   if (!smsCode.value.trim()) {
     smsCodeError.value = '请输入验证码'
     return
   }
-  if (smsCode.value.trim().length !== 6) {
-    smsCodeError.value = '验证码应为6位数字'
+  if (smsCode.value.trim().length !== 4) {
+    smsCodeError.value = '验证码应为4位数字'
+    return
+  }
+  if (!isCodeSent.value) {
+    smsCodeError.value = '请先获取验证码'
+    return
+  }
+  if (isPhoneChanged.value) {
+    smsCodeError.value = '手机号码已修改，请重新获取验证码'
+    return
+  }
+  if (smsCode.value.trim() !== generatedCode.value) {
+    smsCodeError.value = '验证码错误，请重新输入'
     return
   }
   if (!password.value.trim()) {
     passwordError.value = '请输入密码'
     return
   }
-  if (password.value.length < 6) {
-    passwordError.value = '密码至少6位'
+  // 检查密码是否只包含中文字符
+  const chineseRegex = /^[\u4e00-\u9fa5]+$/
+  if (!chineseRegex.test(password.value)) {
+    passwordError.value = '密码只能包含中文字符'
+    return
+  }
+  if (password.value.length < 2) {
+    passwordError.value = '密码至少2个中文字符'
     return
   }
   if (!confirmPassword.value.trim()) {
@@ -238,26 +349,29 @@ const onRegister = async () => {
   }
 
   error.value = ''
+  successMessage.value = ''
   loading.value = true
   
   try {
-    // 这里应该调用注册的API
-    // const res = await registerApi({
-    //   phone: phone.value,
-    //   smsCode: smsCode.value,
-    //   password: password.value
-    // })
-    console.log('注册信息:', {
-      phone: phone.value,
-      smsCode: smsCode.value,
-      password: password.value
-    })
+    // 调用注册API
+    const res = await registerApi(phone.value, password.value)
+    console.log('注册API响应:', res)
     
-    // 模拟注册成功
-    error.value = '注册功能暂未实现，请使用现有账户登录'
-    loading.value = false
+    if (res && res.code === 0) {
+      // 注册成功
+      successMessage.value = '注册成功！正在跳转到登录页面...'
+      
+      // 延迟跳转到登录页面
+      setTimeout(() => {
+        router.push({ name: 'Login' })
+      }, 2000)
+    } else {
+      error.value = (res && res.msg) || '注册失败，请稍后重试'
+    }
   } catch (e) {
+    console.error('注册失败:', e)
     error.value = '网络错误，请稍后重试'
+  } finally {
     loading.value = false
   }
 }
@@ -454,6 +568,18 @@ const goToLogin = () => {
   margin-left: 4px;
 }
 
+.password-hint {
+  color: #666;
+  font-size: 12px;
+  margin-top: 6px;
+  margin-left: 4px;
+  line-height: 1.4;
+  background: #f8f9fa;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border-left: 3px solid #1DA1F2;
+}
+
 /* 协议同意 */
 .agreement-section {
   margin-bottom: 24px;
@@ -573,6 +699,23 @@ const goToLogin = () => {
 }
 
 .error-icon {
+  margin-right: 8px;
+  font-size: 16px;
+}
+
+/* 成功提示 */
+.success-message {
+  background: #efe;
+  border: 1px solid #cfc;
+  border-radius: 8px;
+  padding: 12px 16px;
+  margin-bottom: 20px;
+  display: flex;
+  align-items: center;
+  color: #363;
+}
+
+.success-icon {
   margin-right: 8px;
   font-size: 16px;
 }

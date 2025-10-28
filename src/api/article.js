@@ -1,9 +1,10 @@
 import request from "../utils/new_request.js";
 
 // 获取首页文章列表
+//目前已经修改为获取所有文章列表
 export const getHomeArticleList = (userid) => {
   return request({
-    url: `/article/homeArticlelist?userid=${userid}`,
+    url: `/article/AllArticleList?userid=${userid}`,
     method: "GET",
   });
 };
@@ -66,5 +67,31 @@ export const deleteArticleApi = (articleId) => {
   return request({
     url: `/article/deletArticle?articleId=${articleId}`,
     method: "GET",
+  });
+};
+
+//发布引用文章
+export const publishRepeatArticleApi = (content, categoryId, username, createUserId, BeSharearticleID, createUserName, files = []) => {
+  // 创建 FormData 对象
+  const formData = new FormData();
+  formData.append('content', content);
+  formData.append('categoryId', categoryId);
+  formData.append('username', username);
+  formData.append('createUserId', createUserId);
+  formData.append('BeSharearticleID', BeSharearticleID);
+  formData.append('createUserName', createUserName);
+  
+  // 添加图片文件，字段名为 file
+  files.forEach((file, index) => {
+    formData.append('file', file);
+  });
+
+  return request({
+    url: `/article/addReapetArticle`,
+    method: "POST",
+    data: formData,
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
   });
 };

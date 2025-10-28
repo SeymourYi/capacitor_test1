@@ -29,6 +29,7 @@
           class="search-input" 
           placeholder="搜索用户名或昵称..." 
           v-model="searchQuery"
+          @input="handleInputChange"
           @keyup.enter="handleSearch"
         />
         <button v-if="searchQuery" class="clear-button" @click="clearSearch">
@@ -38,14 +39,14 @@
           </svg>
         </button>
       </div>
-      <button 
+      <!-- <button 
         class="search-button" 
         @click="handleSearch"
         :disabled="!searchQuery.trim() || loading"
       >
         <div v-if="loading" class="btn-spinner"></div>
         {{ loading ? '搜索中...' : '搜索' }}
-      </button>
+      </button> -->
     </div>
 
     <!-- 搜索建议 -->
@@ -172,83 +173,80 @@ defineOptions({
   name: 'SearchUsers'
 })
 
-import { ref, onActivated, onDeactivated } from 'vue'
+import { ref, onActivated, onDeactivated, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
-import { searchFriendApi } from '@/api/user.js'
+import { searchFriendApi, getRecommendFriendListApi } from '@/api/user.js'
+import { useUserStore } from '@/store/user.js'
 import SkeletonLoader from '@/components/SkeletonLoader.vue'
 
 const router = useRouter()
+const userStore = useUserStore()
 
 // 搜索相关状态
 const searchQuery = ref('')
 const showSuggestions = ref(true)
 const loading = ref(false)
 const hasSearched = ref(false)
+const searchTimeout = ref(null)
+const currentUsername = ref('') // 当前用户名，用于获取推荐好友
 
-// 模拟搜索结果数据
-const searchResults = ref([
-  {
-    id: 1,
-    username: 'tech_guru',
-    nickname: '科技达人',
-    userPic: '',
-    bio: '热爱科技，分享最新技术动态',
-    followingCount: 128,
-    followersCount: 2560,
-    postsCount: 89,
-    isFollowing: false
-  },
-  {
-    id: 2,
-    username: 'life_sharer',
-    nickname: '生活分享者',
-    userPic: '',
-    bio: '记录生活中的美好瞬间',
-    followingCount: 89,
-    followersCount: 1234,
-    postsCount: 156,
-    isFollowing: true
-  },
-  {
-    id: 3,
-    username: 'news_hunter',
-    nickname: '新闻猎手',
-    userPic: '',
-    bio: '第一时间分享重要新闻',
-    followingCount: 45,
-    followersCount: 890,
-    postsCount: 234,
-    isFollowing: false
-  }
-])
+// 搜索结果数据
+const searchResults = ref([])
 
-// 模拟推荐用户数据
-const recommendedUsers = ref([
-  {
-    id: 4,
-    username: 'designer_pro',
-    nickname: '设计师小王',
-    userPic: '',
-    bio: 'UI/UX设计师，分享设计心得',
-    isFollowing: false
-  },
-  {
-    id: 5,
-    username: 'food_lover',
-    nickname: '美食爱好者',
-    userPic: '',
-    bio: '探索城市美食，分享味蕾体验',
-    isFollowing: false
-  },
-  {
-    id: 6,
-    username: 'travel_blogger',
-    nickname: '旅行博主',
-    userPic: '',
-    bio: '环游世界，记录美好旅程',
-    isFollowing: false
+// 推荐用户数据
+const recommendedUsers = ref([])
+
+// 加载推荐用户
+const loadRecommendedUsers = async () => {
+  try {
+    // 获取当前用户名，优先从store获取，其次从localStorage获取
+    const username = userStore.userInfo?.username || localStorage.getItem('username') || 'defaultUser'
+    currentUsername.value = username
+    
+    const response = await getRecommendFriendListApi(username)
+    
+    if (response.code === 0) {
+      // 处理推荐用户数据，使用新的接口格式
+      recommendedUsers.value = response.data.map((user, index) => ({
+        id: user.id || index + 1,
+        username: user.username,
+        nickname: user.nickname,
+        userPic: user.userPic,
+        bio: user.bio || '这个人很神秘，还没有简介',
+        isFollowing: user.isFriend || false,
+        createTime: user.createTime,
+        uptonowTime: user.uptonowTime
+      }))
+    } else {
+      console.error('获取推荐用户失败:', response.msg)
+      recommendedUsers.value = []
+    }
+  } catch (error) {
+    console.error('获取推荐用户请求失败:', error)
+    recommendedUsers.value = []
   }
-])
+}
+
+// 输入变化处理（带防抖）
+const handleInputChange = () => {
+  // 清除之前的定时器
+  if (searchTimeout.value) {
+    clearTimeout(searchTimeout.value)
+  }
+  
+  // 如果输入为空，显示推荐用户
+  if (!searchQuery.value.trim()) {
+    hasSearched.value = false
+    showSuggestions.value = true
+    searchResults.value = []
+    return
+  }
+  
+  // 设置防抖延迟搜索
+  searchTimeout.value = setTimeout(() => {
+    handleSearch()
+  }, 500) // 500ms 防抖延迟
+}
 
 // 搜索处理
 const handleSearch = async () => {
@@ -274,7 +272,9 @@ const handleSearch = async () => {
         followingCount: 0,
         followersCount: 0,
         postsCount: 0,
-        isFollowing: user.isFriend || false  // 使用接口返回的isFriend字段
+        isFollowing: user.isFriend || false,  // 使用接口返回的isFriend字段
+        createTime: user.createTime,
+        uptonowTime: user.uptonowTime
       }))
     } else {
       console.error('搜索失败:', response.msg)
@@ -290,6 +290,12 @@ const handleSearch = async () => {
 
 // 清除搜索
 const clearSearch = () => {
+  // 清除防抖定时器
+  if (searchTimeout.value) {
+    clearTimeout(searchTimeout.value)
+    searchTimeout.value = null
+  }
+  
   searchQuery.value = ''
   showSuggestions.value = true
   hasSearched.value = false
@@ -326,9 +332,16 @@ const handleImageError = (e) => {
   e.target.style.display = 'none'
 }
 
+// 组件挂载时加载推荐用户
+onMounted(() => {
+  loadRecommendedUsers()
+})
+
 // 组件被激活时（从缓存中恢复）
 onActivated(() => {
   console.log('SearchUsers component activated')
+  // 重新加载推荐用户
+  loadRecommendedUsers()
 })
 
 // 组件被停用时（进入缓存）

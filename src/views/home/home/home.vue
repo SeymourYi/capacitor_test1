@@ -32,6 +32,19 @@
         <div class="header-title-center">通知</div>
         <button class="mark-all-read-btn" @click="markAllAsRead">全部已读</button>
       </template>
+      
+      <!-- 消息页面：左侧logo + 中间标题 + 右侧搜索按钮 -->
+      <template v-else-if="isMessage">
+        <div class="header-logo-left">
+          <div class="logo-icon">🐦</div>
+        </div>
+        <div class="header-title-center">消息</div>
+        <div class="search-button" @click="handleSearchMessages">
+          <svg viewBox="0 0 24 24" class="search-icon">
+            <path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z" fill="currentColor"/>
+          </svg>
+        </div>
+      </template>
     </div>
 
     <!-- 加号按钮下拉菜单 -->
@@ -66,7 +79,7 @@
       <router-view />
     </div>
 
-    <!-- 底部栏：主页 / 我 -->
+    <!-- 底部栏：主页 / 通知 / 消息 / 我 -->
     <div class="bottombar">
       <button class="tab" :class="{ active: isHome }" @click="goHome">
         <svg viewBox="0 0 24 24" class="tab-icon">
@@ -86,6 +99,17 @@
         </div>
         <span>通知</span>
       </button>
+      <!-- <button class="tab" :class="{ active: isMessage }" @click="goMessage">
+        <div class="tab-icon-wrapper">
+          <svg viewBox="0 0 24 24" class="tab-icon">
+            <path d="M20 2H4c-1.1 0-1.99.9-1.99 2L2 22l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-2 12H6v-2h12v2zm0-3H6V9h12v2zm0-3H6V6h12v2z" fill="currentColor"/>
+          </svg>
+          <div v-if="messageCount > 0" class="notification-badge">
+            {{ messageCount > 99 ? '99+' : messageCount }}
+          </div>
+        </div>
+        <span>消息</span>
+      </button> -->
       <button class="tab" :class="{ active: isMe }" @click="goMe">
         <svg viewBox="0 0 24 24" class="tab-icon">
           <path d="M12 12a5 5 0 1 0-5-5 5 5 0 0 0 5 5zm0 2c-5 0-9 2.5-9 5.5V22h18v-2.5C21 16.5 17 14 12 14z" fill="currentColor"/>
@@ -112,12 +136,20 @@ const showAddMenu = ref(false)
 
 const isHome = computed(() => route.name === 'HomeFeed')
 const isNotice = computed(() => route.name === 'Notifications')
+const isMessage = computed(() => route.name === 'Message')
 const isMe = computed(() => route.name === 'Me')
 
 const currentTitle = computed(() => {
   if (isHome.value) return '主页'
   if (isNotice.value) return '通知'
+  if (isMessage.value) return '消息'
   return '我'
+})
+
+// 消息数量（这里可以后续集成实际的消息数据）
+const messageCount = computed(() => {
+  // 暂时返回0，后续可以集成实际的消息未读数量
+  return 0
 })
 
 const goHome = () => {
@@ -135,6 +167,12 @@ const goMe = () => {
 const goNotice = () => {
   if (!isNotice.value) {
     router.push({ name: 'Notifications' })
+  }
+}
+
+const goMessage = () => {
+  if (!isMessage.value) {
+    router.push({ name: 'Message' })
   }
 }
 
@@ -207,6 +245,11 @@ const handleCreateGroup = () => {
 const handleScan = () => {
   console.log('扫一扫')
   closeAddMenu()
+}
+
+const handleSearchMessages = () => {
+  console.log('搜索消息')
+  // 这里可以添加搜索消息的逻辑
 }
 
 // 初始化状态栏和安全区域
@@ -339,6 +382,35 @@ onMounted(async () => {
 
 .mark-all-read-btn:active {
   background: #0f7ab8;
+}
+
+/* 搜索按钮样式 */
+.search-button {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #ffffff;
+  border: 1px solid #e1e5e9;
+  border-radius: 50%;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.search-button:hover {
+  background: #f7f9f9;
+  border-color: #1DA1F2;
+}
+
+.search-button:active {
+  background: #e6ecf0;
+}
+
+.search-icon {
+  width: 18px;
+  height: 18px;
+  color: #0f1419;
 }
 
 

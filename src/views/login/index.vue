@@ -39,7 +39,7 @@
           <div class="input-wrapper">
             <input 
               class="form-input" 
-              placeholder="用户名" 
+              placeholder="手机号" 
               v-model="username"
               :class="{ error: usernameError }"
             />
@@ -53,11 +53,13 @@
             <input 
               class="form-input" 
               placeholder="密码" 
-              type="password" 
               v-model="password"
               :class="{ error: passwordError }"
             />
             <div class="input-icon">🔒</div>
+          </div>
+          <div class="password-hint">
+            💡 还记得那首你喜欢的诗吗？
           </div>
           <div v-if="passwordError" class="error-text">{{ passwordError }}</div>
         </div>
@@ -264,11 +266,17 @@ const sendSmsCode = async () => {
 const onLogin = async () => {
   // 表单验证
   if (!username.value.trim()) {
-    usernameError.value = '请输入用户名'
+    usernameError.value = '请输入手机号'
     return
   }
   if (!password.value.trim()) {
     passwordError.value = '请输入密码'
+    return
+  }
+  // 检查密码是否只包含中文字符
+  const chineseRegex = /^[\u4e00-\u9fa5]+$/
+  if (!chineseRegex.test(password.value)) {
+    passwordError.value = '密码只能包含中文字符'
     return
   }
 
@@ -361,7 +369,13 @@ const loadUserData = async () => {
   try {
     const userRes = await getUserInfo()
     if (userRes && userRes.code === 0) {
-      userStore.setUserInfo(userRes.data)
+      // 确保用户信息包含职业和生日字段，如果接口没有返回则添加默认值
+      const userInfo = {
+        ...userRes.data,
+        profession: userRes.data.profession || '',
+        birthday: userRes.data.birthday || ''
+      }
+      userStore.setUserInfo(userInfo)
       
       // 获取通知个数
       try {
@@ -582,6 +596,18 @@ const goToRegister = () => {
   font-size: 14px;
   margin-top: 8px;
   margin-left: 4px;
+}
+
+.password-hint {
+  color: #666;
+  font-size: 12px;
+  margin-top: 6px;
+  margin-left: 4px;
+  line-height: 1.4;
+  background: #f8f9fa;
+  padding: 8px 12px;
+  border-radius: 6px;
+  border-left: 3px solid #1DA1F2;
 }
 
 /* 登录按钮 */

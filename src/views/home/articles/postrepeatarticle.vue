@@ -6,8 +6,8 @@
       <div class="nav-title">引用</div>
       <button 
         class="nav-publish" 
-        :class="{ 'disabled': !content.trim() || publishing }"
-        :disabled="!content.trim() || publishing"
+        :class="{ 'disabled': (!content.trim() && selectedImages.length === 0) || publishing }"
+        :disabled="(!content.trim() && selectedImages.length === 0) || publishing"
         @click="onPublish"
       >
         {{ publishing ? '发布中...' : '引用' }}
@@ -75,14 +75,37 @@
         
         <!-- 媒体网格（保持与postarticle一致） -->
         <div class="media-grid">
-          <div class="add-card">
+          <!-- 添加图片按钮 -->
+          <div v-if="selectedImages.length < 9" class="add-card" @click="selectImages">
             <svg class="add-icon" viewBox="0 0 24 24">
               <path d="M12 5v14M5 12h14" stroke="currentColor" stroke-width="2" stroke-linecap="round" fill="none"/>
             </svg>
           </div>
-          <div class="media-thumb"></div>
-          <div class="media-thumb"></div>
-          <div class="media-thumb"></div>
+          
+          <!-- 已选择的图片 -->
+          <div 
+            v-for="(image, index) in selectedImages" 
+            :key="index"
+            class="media-thumb"
+            @click="removeImage(index)"
+          >
+            <img :src="image.preview" :alt="`图片${index + 1}`" />
+            <div class="remove-overlay">
+              <svg viewBox="0 0 24 24" class="remove-icon">
+                <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </div>
+          </div>
+          
+          <!-- 隐藏的文件输入 -->
+          <input 
+            ref="fileInput"
+            type="file" 
+            multiple 
+            accept="image/*" 
+            style="display: none"
+            @change="handleFileSelect"
+          />
         </div>
       </div>
     </div>
@@ -132,6 +155,7 @@
 import { ref, onMounted, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useUserStore } from '@/store/user.js'
+import { publishRepeatArticleApi } from '@/api/article.js'
 import PreviewImg from '@/components/PreviewImg.vue'
 
 const route = useRoute()
@@ -140,6 +164,10 @@ const userStore = useUserStore()
 
 const content = ref('')
 const publishing = ref(false)
+
+// 图片相关
+const selectedImages = ref([])
+const fileInput = ref(null)
 
 // 从路由参数获取文章信息
 const articleId = ref(route.query.articleId)
@@ -173,14 +201,138 @@ const openImagePreview = (index) => {
   previewVisible.value = true
 }
 
+// 选择图片
+const selectImages = () => {
+  fileInput.value.click()
+}
+
+// 处理文件选择
+const handleFileSelect = (event) => {
+  const files = Array.from(event.target.files)
+  const maxFiles = 9 - selectedImages.value.length
+  const remainingSlots = Math.min(files.length, maxFiles)
+  
+  for (let i = 0; i < remainingSlots; i++) {
+    const file = files[i]
+    
+    // 验证文件类型
+    if (!file.type.startsWith('image/')) {
+      console.warn('请选择图片文件:', file.name)
+      continue
+    }
+    
+    // 验证文件大小 (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      console.warn('图片文件过大:', file.name)
+      continue
+    }
+    
+    // 创建预览URL
+    const preview = URL.createObjectURL(file)
+    selectedImages.value.push({
+      file: file,
+      preview: preview
+    })
+  }
+  
+  // 清空input值，允许重复选择同一文件
+  event.target.value = ''
+}
+
+// 删除图片
+const removeImage = (index) => {
+  // 释放预览URL内存
+  URL.revokeObjectURL(selectedImages.value[index].preview)
+  selectedImages.value.splice(index, 1)
+}
+
 const onCancel = () => {
+  // 清理预览URL
+  selectedImages.value.forEach(img => URL.revokeObjectURL(img.preview))
   router.back()
 }
 
-const onPublish = () => {
-  // 暂时只做UI，不实现具体逻辑
-  console.log('发布引用:', content.value)
-  console.log('引用的文章ID:', articleId.value)
+const onPublish = async () => {
+  // 检查是否有内容或图片
+  if (!content.value.trim() && selectedImages.value.length === 0) {
+    console.log('没有内容或图片，无法发布')
+    return
+  }
+
+  // 检查用户登录状态
+  if (!userStore.userInfo || !userStore.userInfo.username) {
+    console.error('用户未登录')
+    return
+  }
+
+  publishing.value = true
+
+  try {
+    // 准备API调用参数
+    const apiParams = {
+      content: content.value.trim(),
+      categoryId: 1, // 默认分类ID
+      username: userStore.userInfo.username,
+      createUserId: userStore.userInfo.id,
+      BeSharearticleID: articleId.value, // 被引用的文章ID
+      createUserName: userStore.userInfo.username,
+      files: selectedImages.value.map(img => img.file)
+    }
+
+    // 打印发布数据结构供调试
+    console.log('=== 引用文章发布数据结构 ===')
+    console.log('API参数:', apiParams)
+    console.log('内容:', apiParams.content)
+    console.log('被引用文章ID:', apiParams.BeSharearticleID)
+    console.log('用户信息:', {
+      username: apiParams.username,
+      userId: apiParams.createUserId,
+      createUserName: apiParams.createUserName
+    })
+    console.log('图片文件数量:', apiParams.files.length)
+    console.log('图片文件详情:', apiParams.files.map((file, index) => ({
+      index: index,
+      name: file.name,
+      size: file.size,
+      type: file.type
+    })))
+    console.log('原文信息:', {
+      id: articleId.value,
+      content: articleContent.value,
+      author: articleAuthor.value,
+      authorPic: articleAuthorPic.value,
+      images: articleImages.value
+    })
+    console.log('==============================')
+
+    // 调用真实的API接口
+    const res = await publishRepeatArticleApi(
+      apiParams.content,
+      apiParams.categoryId,
+      apiParams.username,
+      apiParams.createUserId,
+      apiParams.BeSharearticleID,
+      apiParams.createUserName,
+      apiParams.files
+    )
+    
+    if (res && res.code === 0) {
+      console.log('引用文章发布成功:', res)
+      
+      // 清理预览URL
+      selectedImages.value.forEach(img => URL.revokeObjectURL(img.preview))
+      
+      // 发布成功后返回上一页
+      router.back()
+    } else {
+      console.error('发布失败:', res?.msg || '未知错误')
+    }
+    
+  } catch (error) {
+    console.error('发布引用文章失败:', error)
+  } finally {
+    publishing.value = false
+  }
 }
 
 onMounted(() => {
@@ -518,6 +670,43 @@ onMounted(() => {
 
 .media-thumb:hover {
   background: #d1d9dd;
+}
+
+/* 图片删除样式 */
+.media-thumb {
+  position: relative;
+  overflow: hidden;
+}
+
+.media-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.remove-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.2s;
+  cursor: pointer;
+}
+
+.media-thumb:hover .remove-overlay {
+  opacity: 1;
+}
+
+.remove-icon {
+  width: 20px;
+  height: 20px;
+  color: white;
 }
 
 /* 功能选项（保持与postarticle一致） */

@@ -66,3 +66,94 @@ export const sendSmsCodeApi = (phoneNumber, code) => {
     }
   })
 }
+
+//注册接口API
+export const registerApi = (phoneNumber, password) => {
+  return request({
+    url: `/user/register?phoneNumber=${phoneNumber}&password=${password}`,
+    method: 'post',
+    // data: {}
+  })
+}
+//更新用户信息接口API
+export const updateUserInfoApi = (username, nickname, bio, location, birthday, profession, avatarFile = null, bgFile = null) => {
+  // 创建 FormData 对象，以匹配服务器期望的 form-data 格式
+  const formData = new FormData()
+  formData.append('username', username)
+  formData.append('nickname', nickname)
+  formData.append('bio', bio)
+  formData.append('location', location)
+  formData.append('birthday', birthday)
+  formData.append('profession', profession)
+  
+  // 添加头像文件 (file1)
+  if (avatarFile) {
+    formData.append('file1', avatarFile)
+  }
+  
+  // 添加背景图片文件 (file2)
+  if (bgFile) {
+    formData.append('file2', bgFile)
+  }
+  
+  return request({
+    url: `/user/updateUser`,
+    method: 'post',
+    data: formData,
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  })
+}
+//修改密码接口API
+export const changePasswordApi = (username, newpwd, oldpassword, phoneNumber) => {
+  // 创建 FormData 对象，以匹配服务器期望的 form-data 格式
+  const formData = new FormData()
+  formData.append('username', username)
+  formData.append('oldpassword', oldpassword)
+  formData.append('newpwd', newpwd)
+  
+  // 如果传递了phoneNumber，则添加到FormData中
+  if (phoneNumber) {
+    formData.append('phoneNumber', phoneNumber)
+  }
+  
+  return request({
+    url: `/user/updatepwd`,
+    method: 'post',
+    data: formData,
+    headers: {
+      'Content-Type': 'multipart/form-data'
+    }
+  })
+}
+//注销账号
+export const deleteAccountApi = (username) => {
+  return request({
+    url: `/user/Deregister?username=${username}`,
+    method: 'post'
+  })
+}
+
+//获取推荐好友列表
+export const getRecommendFriendListApi = (username) => {
+  return request({
+    url: `/user/latestUsers?currentUsername=${username}`,
+    method: 'get'
+  })
+}
+//是不是朋友
+export const isFriendApi = (currentUsername, targetUsername) => {
+  return request({
+    url: `/user/whetherfriend?username=${currentUsername}&friendname=${targetUsername}`,
+    method: 'post'
+  })
+}
+
+//关注或者取关用户接口
+export const followOrUnfollowUserApi = (currentUsername, targetUsername) => {
+  return request({
+    url: `/user/addfriend?username=${currentUsername}&friendname=${targetUsername}`,
+    method: 'get'
+  })
+}

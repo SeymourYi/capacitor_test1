@@ -62,6 +62,7 @@ onUnmounted(() => {
   padding: 0;
   box-sizing: border-box;
   -webkit-tap-highlight-color: transparent;
+  font-family: Inter, sans-serif !important;
 }
 
 body {

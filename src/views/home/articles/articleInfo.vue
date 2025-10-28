@@ -46,7 +46,6 @@
           <div class="author-name">{{ article.nickname }}</div>
           <div class="author-username">@{{ article.username }}</div>
         </div>
-        <button class="follow-button">关注</button>
       </div>
 
       <!-- 文章内容 -->
@@ -58,7 +57,19 @@
         
         <p class="article-text">{{ article.content }}</p>
         
-        <!-- 转发内容 -->
+        <!-- 自身图片列表（在内容下面） -->
+        <div v-if="hasImages(article)" class="article-images">
+          <div 
+            v-for="(img, index) in getImageList(article)" 
+            :key="index"
+            class="article-image"
+            @click="openImagePreview(article, index)"
+          >
+            <img :src="img" alt="文章图片" @error="handleImageError" />
+          </div>
+        </div>
+        
+        <!-- 转发内容（在最下面） -->
         <div v-if="article.userShare && article.beShareContent" class="retweet-container">
           <div class="retweet-header">
             <svg viewBox="0 0 24 24" class="retweet-icon">
@@ -78,7 +89,7 @@
               <div v-else class="retweet-avatar-placeholder"></div>
               <div class="retweet-author-info">
                 <span class="retweet-author-name">{{ article.beShareNickName }}</span>
-                <span class="retweet-author-username">@{{ article.beShareCreaterUserName }}</span>
+                <span class="retweet-author-username">@{{ truncateId(article.beShareCreaterUserName) }}</span>
                 <span class="retweet-time">· {{ article.beShareUptonowTime }}</span>
               </div>
             </div>
@@ -86,18 +97,19 @@
             <div v-if="article.beShareCategoryName" class="retweet-category">
               #{{ article.beShareCategoryName }}
             </div>
-          </div>
-        </div>
-        
-        <!-- 图片列表 -->
-        <div v-if="hasImages(article)" class="article-images">
-          <div 
-            v-for="(img, index) in getImageList(article)" 
-            :key="index"
-            class="article-image"
-            @click="openImagePreview(article, index)"
-          >
-            <img :src="img" alt="文章图片" @error="handleImageError" />
+            
+            <!-- 被引用文章的图片 -->
+            <div v-if="hasRetweetImages(article)" class="retweet-images">
+              <div 
+                v-for="(img, index) in getRetweetImageList(article)" 
+                :key="index"
+                class="retweet-image"
+                :class="{ 'single-image': getRetweetImageList(article).length === 1 }"
+                @click.stop="openRetweetImagePreview(article, index)"
+              >
+                <img :src="img" alt="被引用文章图片" @error="handleImageError" />
+              </div>
+            </div>
           </div>
         </div>
       </div>
@@ -290,6 +302,38 @@ const getImageList = (article) => {
   return images
 }
 
+// 限制ID显示长度
+const truncateId = (id, maxLength = 8) => {
+  if (!id) return ''
+  const idStr = String(id)
+  return idStr.length > maxLength ? idStr.substring(0, maxLength) + '...' : idStr
+}
+
+// 获取被引用文章的图片列表
+const getRetweetImageList = (article) => {
+  const images = []
+  
+  // 如果有beShareCoverImg单张图片
+  if (article.beShareCoverImg && article.beShareCoverImg.trim() !== '') {
+    images.push(article.beShareCoverImg)
+  }
+  
+  // 如果有beShareCoverImgList多图（备用）
+  if (article.beShareCoverImgList && Array.isArray(article.beShareCoverImgList)) {
+    const validImages = article.beShareCoverImgList.filter(img => img && img.trim() !== '')
+    images.push(...validImages)
+  }
+  
+  return images
+}
+
+// 判断被引用文章是否有图片
+const hasRetweetImages = (article) => {
+  return (article.beShareCoverImg && article.beShareCoverImg.trim() !== '') ||
+         (article.beShareCoverImgList && Array.isArray(article.beShareCoverImgList) && 
+          article.beShareCoverImgList.some(img => img && img.trim() !== ''))
+}
+
 // 图片加载失败处理
 const handleImageError = (e) => {
   e.target.style.display = 'none'
@@ -419,6 +463,13 @@ const goToRetweetedArticle = () => {
 // 打开图片预览
 const openImagePreview = (article, index) => {
   previewImages.value = getImageList(article)
+  previewIndex.value = index
+  previewVisible.value = true
+}
+
+// 打开被引用文章图片预览
+const openRetweetImagePreview = (article, index) => {
+  previewImages.value = getRetweetImageList(article)
   previewIndex.value = index
   previewVisible.value = true
 }
@@ -648,8 +699,8 @@ onMounted(() => {
 .author-section {
   display: flex;
   align-items: center;
-  padding: 12px 16px;
-  gap: 12px;
+  padding: 16px 20px;
+  gap: 16px;
 }
 
 .author-avatar {
@@ -657,15 +708,15 @@ onMounted(() => {
 }
 
 .avatar {
-  width: 48px;
-  height: 48px;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
   object-fit: cover;
 }
 
 .avatar-placeholder {
-  width: 48px;
-  height: 48px;
+  width: 56px;
+  height: 56px;
   border-radius: 50%;
   background-color: #1DA1F2;
 }
@@ -676,17 +727,18 @@ onMounted(() => {
 }
 
 .author-name {
-  font-size: 17px;
+  font-size: 18px;
   font-weight: 700;
   color: #0f1419;
   line-height: 1.3;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  margin-bottom: 2px;
 }
 
 .author-username {
-  font-size: 15px;
+  font-size: 16px;
   color: #536471;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -712,7 +764,7 @@ onMounted(() => {
 }
 
 .article-content {
-  padding: 12px 16px;
+  padding: 16px 20px;
 }
 
 .category-tag {
@@ -824,11 +876,101 @@ onMounted(() => {
   font-weight: 500;
 }
 
+/* 被引用文章图片样式 */
+.retweet-images {
+  display: grid;
+  gap: 4px;
+  margin-top: 8px;
+  border-radius: 8px;
+  overflow: hidden;
+  max-width: 300px;
+}
+
+/* 单张图片 */
+.retweet-images:has(.retweet-image:nth-child(1):last-child) {
+  grid-template-columns: 1fr;
+  max-width: 250px;
+}
+
+.retweet-images:has(.retweet-image:nth-child(1):last-child) .retweet-image {
+  max-height: 250px;
+  aspect-ratio: auto;
+}
+
+/* 两张图片 */
+.retweet-images:has(.retweet-image:nth-child(2):last-child) {
+  grid-template-columns: 1fr 1fr;
+  max-width: 250px;
+}
+
+.retweet-images:has(.retweet-image:nth-child(2):last-child) .retweet-image {
+  aspect-ratio: 1;
+}
+
+/* 三张图片 - 微信朋友圈样式 */
+.retweet-images:has(.retweet-image:nth-child(3):last-child) {
+  grid-template-columns: 2fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  max-width: 250px;
+}
+
+.retweet-images:has(.retweet-image:nth-child(3):last-child) .retweet-image:nth-child(1) {
+  grid-row: 1 / 3;
+  aspect-ratio: 1;
+}
+
+.retweet-images:has(.retweet-image:nth-child(3):last-child) .retweet-image:nth-child(2),
+.retweet-images:has(.retweet-image:nth-child(3):last-child) .retweet-image:nth-child(3) {
+  aspect-ratio: 1;
+}
+
+/* 四张图片 - 2x2网格 */
+.retweet-images:has(.retweet-image:nth-child(4):last-child) {
+  grid-template-columns: 1fr 1fr;
+  grid-template-rows: 1fr 1fr;
+  max-width: 250px;
+}
+
+.retweet-images:has(.retweet-image:nth-child(4):last-child) .retweet-image {
+  aspect-ratio: 1;
+}
+
+/* 五张及以上图片 - 3列网格 */
+.retweet-images:has(.retweet-image:nth-child(5)) {
+  grid-template-columns: repeat(3, 1fr);
+  max-width: 250px;
+}
+
+.retweet-images:has(.retweet-image:nth-child(5)) .retweet-image {
+  aspect-ratio: 1;
+}
+
+.retweet-image {
+  position: relative;
+  cursor: pointer;
+  overflow: hidden;
+  background: #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.retweet-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.2s ease;
+}
+
+.retweet-image:hover img {
+  transform: scale(1.05);
+}
+
 .article-text {
-  font-size: 19px;
-  line-height: 1.5;
+  font-size: 20px;
+  line-height: 1.4;
   color: #0f1419;
-  margin: 0 0 12px 0;
+  margin: 0 0 16px 0;
   white-space: pre-wrap;
   word-wrap: break-word;
   word-break: break-word;
@@ -926,16 +1068,16 @@ onMounted(() => {
 }
 
 .article-time {
-  padding: 12px 16px;
-  font-size: 15px;
+  padding: 16px 20px;
+  font-size: 16px;
   color: #536471;
   border-bottom: 1px solid #eff3f4;
 }
 
 .article-stats {
   display: flex;
-  padding: 12px 16px;
-  gap: 20px;
+  padding: 16px 20px;
+  gap: 24px;
   border-bottom: 1px solid #eff3f4;
   flex-wrap: wrap;
 }
@@ -952,20 +1094,20 @@ onMounted(() => {
 }
 
 .stat-number {
-  font-size: 15px;
+  font-size: 16px;
   font-weight: 700;
   color: #0f1419;
 }
 
 .stat-label {
-  font-size: 15px;
+  font-size: 16px;
   color: #536471;
 }
 
 .article-actions {
   display: flex;
   justify-content: space-around;
-  padding: 8px 16px;
+  padding: 12px 20px;
   border-bottom: 1px solid #eff3f4;
 }
 
@@ -1019,8 +1161,8 @@ onMounted(() => {
 }
 
 .section-header {
-  padding: 12px 16px;
-  font-size: 17px;
+  padding: 16px 20px;
+  font-size: 18px;
   font-weight: 700;
   color: #0f1419;
   border-bottom: 1px solid #eff3f4;
@@ -1093,11 +1235,11 @@ onMounted(() => {
 
 /* 评论列表（推特样式） */
 .comments-list { display: flex; flex-direction: column; }
-.comment-item { display: flex; gap: 12px; padding: 12px 16px; border-bottom: 1px solid #eff3f4; }
+.comment-item { display: flex; gap: 14px; padding: 16px 20px; border-bottom: 1px solid #eff3f4; }
 .comment-avatar { 
   flex-shrink: 0; 
-  width: 40px; 
-  height: 40px; 
+  width: 44px; 
+  height: 44px; 
   border-radius: 50%; 
   overflow: hidden;
   display: flex;
@@ -1122,11 +1264,11 @@ onMounted(() => {
   font-weight: 500;
 }
 .comment-body { flex: 1; min-width: 0; }
-.comment-header { display: flex; align-items: baseline; gap: 6px; }
-.comment-name { font-weight: 700; color: #0f1419; }
-.comment-username, .comment-time { color: #536471; font-size: 14px; }
+.comment-header { display: flex; align-items: baseline; gap: 6px; margin-bottom: 4px; }
+.comment-name { font-weight: 700; color: #0f1419; font-size: 15px; }
+.comment-username, .comment-time { color: #536471; font-size: 15px; }
 .comment-replyto { color: #536471; font-size: 14px; margin: 2px 0 4px; }
-.comment-text { color: #0f1419; white-space: pre-wrap; word-break: break-word; }
+.comment-text { color: #0f1419; white-space: pre-wrap; word-break: break-word; font-size: 15px; line-height: 1.4; }
 
 /* 评论操作条（与主页动作风格统一） */
 .comment-actions { display: flex; justify-content: space-between; max-width: 380px; margin-top: 6px; }
@@ -1154,39 +1296,54 @@ onMounted(() => {
   }
   
   .author-section,
-  .article-content,
-  .comment-compose {
-    padding: 12px;
+  .article-content {
+    padding: 14px 16px;
+    gap: 14px;
   }
   
   .article-time,
   .section-header {
-    padding: 12px;
+    padding: 14px 16px;
+  }
+  
+  .article-stats {
+    padding: 14px 16px;
+    gap: 20px;
+  }
+  
+  .article-actions {
+    padding: 10px 16px;
   }
   
   .avatar,
   .avatar-placeholder {
-    width: 40px;
-    height: 40px;
+    width: 48px;
+    height: 48px;
   }
   
   .author-name {
-    font-size: 16px;
+    font-size: 17px;
   }
   
   .author-username,
   .article-time,
   .stat-number,
   .stat-label {
-    font-size: 14px;
+    font-size: 15px;
   }
   
   .article-text {
-    font-size: 17px;
+    font-size: 18px;
   }
   
-  .article-stats {
-    gap: 16px;
+  .comment-item {
+    padding: 14px 16px;
+    gap: 12px;
+  }
+  
+  .comment-avatar {
+    width: 40px;
+    height: 40px;
   }
 }
 
